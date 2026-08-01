@@ -38,6 +38,7 @@ const MIN_TYPING_QUESTIONS = 10; // minimum before "Finish for now" unlocks
 const MODALITY_WEIGHT = {
   matching: 1,
   typing: 2,
+  listening: 2,
 };
 
 // English number words 0-10 — accepted as equivalent to the digit when the
@@ -82,8 +83,9 @@ function pickWordsForRound(count, pool){
 // Full spec calls for per-word modality assignment based on that word's
 // own struggle history. This prototype approximates it at the round
 // level: once enough words are "graduated" (answered right more than
-// wrong in matching), rounds start testing them with typing instead —
-// a harder modality, since typing requires recall, not recognition.
+// wrong in matching), rounds start alternating between typing and
+// listening instead — both harder modalities (recall, not recognition),
+// which the adaptive system steps students up into once they're ready.
 // Words still below that bar keep appearing in matching.
 let roundCounter = 0;
 function masteryScore(number){
@@ -94,16 +96,26 @@ function decideRoundModality(){
   roundCounter++;
   // Lowered bar: a word "graduates" after being answered correctly even
   // once more than it's been missed, and only 3 graduated words are
-  // needed before typing rounds start appearing (was 4 at score >= 2 —
-  // realistically needed way too many correct answers to ever surface
-  // during normal play/testing).
+  // needed before typing/listening rounds start appearing (was 4 at
+  // score >= 2 — realistically needed way too many correct answers to
+  // ever surface during normal play/testing).
   const graduated = VOCAB.filter(v => masteryScore(v.number) >= 1);
   const strugglingOrNew = VOCAB.filter(v => masteryScore(v.number) < 1);
-  if(graduated.length >= 3 && strugglingOrNew.length > 0 && roundCounter % 2 === 0){
-    return { mode: 'typing', pool: graduated };
+  const readyForHarderModes = graduated.length >= 3;
+
+  if(readyForHarderModes && strugglingOrNew.length > 0){
+    // Cycle: matching, typing, matching, listening, repeat — both harder
+    // modes get regular turns instead of only ever seeing one of them.
+    const cyclePos = roundCounter % 4;
+    if(cyclePos === 2) return { mode: 'typing', pool: graduated };
+    if(cyclePos === 0) return { mode: 'listening', pool: graduated };
+    return { mode: 'matching', pool: VOCAB };
   }
-  if(graduated.length >= 3 && strugglingOrNew.length === 0){
-    return { mode: 'typing', pool: graduated };
+  if(readyForHarderModes && strugglingOrNew.length === 0){
+    // Everyone's graduated — alternate the two harder modes only.
+    return roundCounter % 2 === 0
+      ? { mode: 'typing', pool: graduated }
+      : { mode: 'listening', pool: graduated };
   }
   return { mode: 'matching', pool: VOCAB };
 }
@@ -203,6 +215,21 @@ function earnCoins(amount){
   setTimeout(()=>coinCounterEl.classList.remove('bump'), 180);
 }
 
+// ---- Listening modality: text-to-speech ---------------------------------
+// Uses the browser's built-in speech synthesis (Web Speech API) — no audio
+// files to generate/host. Speaks the Spanish word aloud; student types the
+// number they heard. Falls back gracefully if the browser has no Spanish
+// voice available (rare, but some environments lack TTS voices entirely).
+function speakSpanish(text){
+  if(!('speechSynthesis' in window)) return false;
+  window.speechSynthesis.cancel(); // stop any overlapping previous utterance
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'es-ES';
+  utterance.rate = 0.85; // slightly slower — easier for learners to catch
+  window.speechSynthesis.speak(utterance);
+  return true;
+}
+
 // ---- App state -------------------------------------------------------
 const state = {
   screen: 'start',
@@ -236,6 +263,8 @@ const typingInstruction = document.getElementById('typingInstruction');
 const typingForm = document.getElementById('typingForm');
 const typingInput = document.getElementById('typingInput');
 const typingFeedback = document.getElementById('typingFeedback');
+const listeningControls = document.getElementById('listeningControls');
+const btnPlayAudio = document.getElementById('btnPlayAudio');
 const finishHint = document.getElementById('finishHint');
 const btnFinishTyping = document.getElementById('btnFinishTyping');
 const modeLabelEl = document.getElementById('modeLabel');
@@ -248,6 +277,9 @@ const toastEl = document.getElementById('toast');
 function showScreen(name){
   Object.entries(screens).forEach(([k, el]) => el.hidden = (k !== name));
   state.screen = name;
+  if(name !== 'game' && 'speechSynthesis' in window){
+    window.speechSynthesis.cancel();
+  }
 }
 
 function showToast(msg){
@@ -266,7 +298,7 @@ function startRound(preDecided){
   state.roundCoinsEarned = 0;
   tabSwitchedDuringRound = false;
 
-  if(state.mode === 'typing'){
+  if(state.mode === 'typing' || state.mode === 'listening'){
     startTypingRound(decision.pool);
   } else {
     startMatchingRound(decision.pool);
@@ -426,7 +458,7 @@ function resolveWrong(a, b){
 }
 
 function updateProgress(){
-  if(state.mode === 'typing'){
+  if(state.mode === 'typing' || state.mode === 'listening'){
     pairsLeftEl.textContent = state.typingQuestionCount === 1
       ? '1 question so far'
       : `${state.typingQuestionCount} questions so far`;
@@ -453,7 +485,7 @@ function finishRound(){
   const matchingStat = document.getElementById('matchingCompleteStat');
   const typingStat = document.getElementById('typingAccuracyStat');
 
-  if(state.mode === 'typing'){
+  if(state.mode === 'typing' || state.mode === 'listening'){
     const total = state.correctAttempts + state.wrongAttempts;
     const accuracy = total > 0 ? Math.round((state.correctAttempts/total)*100) : 100;
     document.getElementById('finalAccuracy').textContent = accuracy;
@@ -478,30 +510,33 @@ function finishRound(){
   // Decide the NEXT round now, so we can show it clearly before continuing,
   // rather than switching modality silently once the player taps Continue.
   state.nextDecision = decideRoundModality();
-  document.getElementById('nextUpMode').textContent =
-    state.nextDecision.mode === 'typing' ? 'Typing' : 'Matching';
+  const nextModeLabels = { typing: 'Typing', listening: 'Listening', matching: 'Matching' };
+  document.getElementById('nextUpMode').textContent = nextModeLabels[state.nextDecision.mode];
 
   showScreen('complete');
 }
 
-// ---- Typing modality -----------------------------------------------------
+// ---- Typing & listening modalities ---------------------------------------
 // Words that "graduate" out of matching (per decideRoundModality) get
-// tested here instead — recall (typing the answer) rather than
-// recognition (picking from two visible options), a meaningfully
-// harder modality for the adaptive system to step students up into.
+// tested here instead — recall (typing the answer, or recognizing the
+// spoken word) rather than recognition (picking from two visible options),
+// meaningfully harder modalities for the adaptive system to step students
+// up into. Both share this same continuous answer panel — the prompt
+// area just shows a canvas (typing) or a play button (listening).
 //
 // Continuous, not round-capped: a fixed small batch wasn't nearly enough
-// real practice. Typing now keeps presenting words (repeating/cycling,
+// real practice. Both modes keep presenting words (repeating/cycling,
 // still weighted toward struggling ones) until the student taps Finish.
 function startTypingRound(pool){
-  modeLabelEl.textContent = 'Typing';
+  const modeLabels = { typing: 'Typing', listening: 'Listening' };
+  modeLabelEl.textContent = modeLabels[state.mode];
   board.hidden = true;
   typingPanel.hidden = false;
   progressTrackEl.hidden = true; // open-ended now — a % bar doesn't apply
 
   state.typingPool = pool;
   state.typingQuestionCount = 0;
-  state.roundTotal = 0; // not used to gate completion in typing mode anymore
+  state.roundTotal = 0; // not used to gate completion in typing/listening mode
 
   showScreen('game');
   updateProgress();
@@ -516,32 +551,57 @@ function renderTypingWord(){
   typingInput.disabled = false;
 
   // Pick one word, weighted toward ones missed more — allows repeats,
-  // since typing is now an open-ended drill rather than a fixed set.
+  // since typing/listening are now open-ended drills rather than a fixed set.
   const [v] = pickWordsForRound(1, state.typingPool);
   state.currentTypingWord = v;
 
-  // Randomize direction per word: sometimes show the digit and ask for
-  // the word, sometimes show the word and ask for the digit.
-  state.typingPromptKind = Math.random() < 0.5 ? 'number' : 'word';
-  const promptText = state.typingPromptKind === 'number' ? String(v.number) : v.word;
-  typingInstruction.textContent = state.typingPromptKind === 'number'
-    ? 'Type the word for:'
-    : 'Type the number for:';
+  if(state.mode === 'listening'){
+    // Listening always asks in one direction: hear the Spanish word,
+    // type the number — that's the actual comprehension skill being
+    // tested, rather than randomizing direction like typing does.
+    state.typingPromptKind = 'word';
+    typingInstruction.textContent = 'Escucha y escribe el número:';
+    typingPrompt.hidden = true;
+    listeningControls.hidden = false;
+    playCurrentListeningWord();
+  } else {
+    // Randomize direction per word: sometimes show the digit and ask for
+    // the word, sometimes show the word and ask for the digit.
+    state.typingPromptKind = Math.random() < 0.5 ? 'number' : 'word';
+    const promptText = state.typingPromptKind === 'number' ? String(v.number) : v.word;
+    typingInstruction.textContent = state.typingPromptKind === 'number'
+      ? 'Type the word for:'
+      : 'Type the number for:';
 
-  typingPrompt.innerHTML = '';
-  const canvas = createWordCanvas();
-  canvas.dataset.text = promptText;
-  typingPrompt.appendChild(canvas);
-  requestAnimationFrame(() => {
-    const rect = typingPrompt.getBoundingClientRect();
-    const cs = getComputedStyle(typingPrompt);
-    const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
-    const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
-    fitWordCanvas(canvas, promptText, rect.width - padX, rect.height - padY);
-  });
+    typingPrompt.hidden = false;
+    listeningControls.hidden = true;
+    typingPrompt.innerHTML = '';
+    const canvas = createWordCanvas();
+    canvas.dataset.text = promptText;
+    typingPrompt.appendChild(canvas);
+    requestAnimationFrame(() => {
+      const rect = typingPrompt.getBoundingClientRect();
+      const cs = getComputedStyle(typingPrompt);
+      const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+      const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+      fitWordCanvas(canvas, promptText, rect.width - padX, rect.height - padY);
+    });
+  }
 
   typingInput.focus();
 }
+
+function playCurrentListeningWord(){
+  if(!state.currentTypingWord) return;
+  btnPlayAudio.classList.add('is-playing');
+  const ok = speakSpanish(state.currentTypingWord.word);
+  setTimeout(() => btnPlayAudio.classList.remove('is-playing'), 700);
+  if(!ok){
+    typingFeedback.textContent = 'Audio isn\u2019t available on this device — ask your teacher for help.';
+  }
+}
+
+btnPlayAudio.addEventListener('click', playCurrentListeningWord);
 
 function normalizeAnswer(str){
   return str.trim().toLowerCase();
@@ -586,10 +646,10 @@ typingForm.addEventListener('submit', (e) => {
 
   if(isCorrect){
     const countsForMastery = !tabSwitchedDuringRound;
-    if(countsForMastery) s.correct += MODALITY_WEIGHT.typing;
+    if(countsForMastery) s.correct += MODALITY_WEIGHT[state.mode];
     state.correctAttempts++;
     state.streak++;
-    const bonus = (state.streak >= 3 ? 2 : 1) * MODALITY_WEIGHT.typing;
+    const bonus = (state.streak >= 3 ? 2 : 1) * MODALITY_WEIGHT[state.mode];
     earnCoins(bonus);
     typingFeedback.textContent = state.streak >= 3 ? `¡Racha! +${bonus}` : `¡Correcto! +${bonus}`;
     typingFeedback.classList.add('correct');
