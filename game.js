@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Número Nest — Vocab Practice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- Ambient background pattern -->
+  <div class="bg-pattern" aria-hidden="true"></div>
+
+  <!-- Top bar: coin counter + mascot egg -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">🥚</span>
+      <span class="brand-name">Número Nest</span>
+    </div>
+    <div class="coin-counter" id="coinCounter">
+      <span class="coin-icon">●</span>
+      <span class="coin-value" id="coinValue">0</span>
+    </div>
+  </header>
+
+  <!-- START SCREEN -->
+  <section class="screen" id="screen-start">
+    <div class="start-card">
+      <div class="egg-wobble">🥚</div>
+      <h1 class="title">¡Vamos a jugar!</h1>
+      <p class="subtitle">Match each number to its word. Earn coins. Hatch something new.</p>
+      <button class="btn-primary" id="btnStart">Empezar</button>
+      <p class="micro">Batch 1 &middot; Números 0–10</p>
+    </div>
+  </section>
+
+  <!-- GAME SCREEN -->
+  <section class="screen screen-game" id="screen-game" hidden>
+    <div class="game-header">
+      <div class="progress-track" aria-hidden="true">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div class="game-stats">
+        <span id="modeLabel">Matching</span>
+        <span class="dot">&middot;</span>
+        <span id="pairsLeft">6 pairs left</span>
+        <span class="dot">&middot;</span>
+        <span id="streakLabel">Streak: 0</span>
+      </div>
+    </div>
+
+    <div class="board" id="board"></div>
+
+    <div class="typing-panel" id="typingPanel" hidden>
+      <p class="typing-instruction" id="typingInstruction">Type the word for:</p>
+      <div class="typing-prompt-frame">
+        <div class="typing-prompt" id="typingPrompt"></div>
+      </div>
+      <form class="typing-form" id="typingForm" autocomplete="off">
+        <input
+          type="text"
+          id="typingInput"
+          class="typing-input"
+          autocomplete="off"
+          autocapitalize="off"
+          autocorrect="off"
+          spellcheck="false"
+          placeholder="Escribe aquí..."
+        />
+        <button type="submit" class="btn-primary btn-small">Enviar</button>
+      </form>
+
+      <div class="accent-row" id="accentRow" role="group" aria-label="Insert accent mark">
+        <button type="button" class="accent-key" data-char="á">á</button>
+        <button type="button" class="accent-key" data-char="é">é</button>
+        <button type="button" class="accent-key" data-char="í">í</button>
+        <button type="button" class="accent-key" data-char="ó">ó</button>
+        <button type="button" class="accent-key" data-char="ú">ú</button>
+        <button type="button" class="accent-key" data-char="ñ">ñ</button>
+        <button type="button" class="accent-key" data-char="ü">ü</button>
+      </div>
+
+      <p class="typing-feedback" id="typingFeedback" aria-live="polite"></p>
+    </div>
+
+    <div class="toast" id="toast" aria-live="polite"></div>
+  </section>
+
+  <!-- SESSION COMPLETE SCREEN -->
+  <section class="screen" id="screen-complete" hidden>
+    <div class="complete-card">
+      <div class="confetti-burst" id="confettiBurst" aria-hidden="true"></div>
+      <h2 class="title">¡Buen trabajo!</h2>
+      <p class="complete-stat" id="matchingCompleteStat">You found all the pairs!</p>
+      <p class="complete-stat" id="typingAccuracyStat" hidden><span id="finalAccuracy">100</span>% accuracy this round</p>
+      <div class="coin-earned">
+        <span class="coin-icon">●</span>
+        <span id="coinsEarnedThisSession">+0</span>
+      </div>
+      <p class="micro" id="masteryNote"></p>
+      <button class="btn-primary" id="btnAgain">Play again</button>
+    </div>
+  </section>
+
+</div>
+
+<script src="js/game.js"></script>
+</body>
+</html>
