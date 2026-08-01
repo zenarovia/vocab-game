@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=5">
+<link rel="stylesheet" href="css/style.css?v=9">
 </head>
 <body>
 
@@ -15,7 +15,7 @@
 
   <!-- Ambient background pattern -->
   <div class="bg-pattern" aria-hidden="true"></div>
-  <div class="build-tag" aria-hidden="true">build 5</div>
+  <div class="build-tag" aria-hidden="true">build 9</div>
 
   <!-- Top bar: coin counter + mascot egg -->
   <header class="topbar">
@@ -35,7 +35,7 @@
       <div class="egg-wobble">🥚</div>
       <h1 class="title">¡Vamos a jugar!</h1>
       <p class="subtitle">Match each number to its word. Earn coins. Hatch something new.</p>
-      <button class="btn-primary" id="btnStart">Empezar</button>
+      <button class="btn-primary" id="btnStart" type="button">Empezar</button>
       <p class="micro">Batch 1 &middot; Números 0–10</p>
     </div>
   </section>
@@ -43,7 +43,7 @@
   <!-- GAME SCREEN -->
   <section class="screen screen-game" id="screen-game" hidden>
     <div class="game-header">
-      <div class="progress-track" aria-hidden="true">
+      <div class="progress-track" id="progressTrack" aria-hidden="true">
         <div class="progress-fill" id="progressFill"></div>
       </div>
       <div class="game-stats">
@@ -87,6 +87,9 @@
       </div>
 
       <p class="typing-feedback" id="typingFeedback" aria-live="polite"></p>
+
+      <p class="finish-hint" id="finishHint">Answer 10 questions to unlock "Finish for now"</p>
+      <button class="btn-finish" id="btnFinishTyping" type="button" hidden>Finish for now</button>
     </div>
 
     <div class="toast" id="toast" aria-live="polite"></div>
@@ -104,12 +107,16 @@
         <span id="coinsEarnedThisSession">+0</span>
       </div>
       <p class="micro" id="masteryNote"></p>
-      <button class="btn-primary" id="btnAgain">Play again</button>
+      <div class="next-up" id="nextUp">
+        <span class="next-up-label">Next up</span>
+        <span class="next-up-mode" id="nextUpMode">Matching</span>
+      </div>
+      <button class="btn-primary" id="btnAgain" type="button">Continue</button>
     </div>
   </section>
 
 </div>
 
-<script src="js/game.js?v=5"></script>
+<script src="js/game.js?v=9"></script>
 </body>
 </html>

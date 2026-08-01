@@ -28,6 +28,21 @@ const VOCAB = [
 ];
 
 const PAIRS_PER_ROUND = 6;
+const MIN_TYPING_QUESTIONS = 10; // minimum before "Finish for now" unlocks
+
+// Harder modalities are worth more — recall (typing) takes more real
+// knowledge than recognition (matching), so it earns more mastery points
+// and coins per correct answer. Placeholder weights for the 3 modalities
+// not yet built (listening, fill-in-context, speed challenge) — set them
+// when each is implemented, keeping the same "harder = worth more" logic.
+const MODALITY_WEIGHT = {
+  matching: 1,
+  typing: 2,
+};
+
+// English number words 0-10 — accepted as equivalent to the digit when the
+// expected answer is a number (e.g. typing "one" counts the same as "1").
+const ENGLISH_NUMBER_WORDS = ['zero','one','two','three','four','five','six','seven','eight','nine','ten'];
 
 // ---- Per-word performance memory (adaptive-lite) ----------------------
 // Real system: persisted per student across sessions. Here: in-memory
@@ -182,6 +197,7 @@ const coinValueEl = document.getElementById('coinValue');
 const coinCounterEl = document.getElementById('coinCounter');
 function earnCoins(amount){
   coins += amount;
+  state.roundCoinsEarned = (state.roundCoinsEarned || 0) + amount;
   coinValueEl.textContent = coins;
   coinCounterEl.classList.add('bump');
   setTimeout(()=>coinCounterEl.classList.remove('bump'), 180);
@@ -192,15 +208,19 @@ const state = {
   screen: 'start',
   mode: 'matching',       // 'matching' | 'typing' for the current round
   roundWords: [],
-  roundTotal: 0,
+  roundTotal: 0,          // used by matching only; typing is open-ended
+  roundCoinsEarned: 0,
   matchedCount: 0,
   wrongAttempts: 0,
   correctAttempts: 0,
   streak: 0,
   openCard: null,   // currently flipped, unmatched card (matching mode)
   lock: false,      // input lock during resolve animation
-  typingIndex: 0,   // which word we're on (typing mode)
+  typingPool: [],           // word pool this typing session draws from
+  typingQuestionCount: 0,   // how many questions answered so far (open-ended)
+  currentTypingWord: null,  // the word currently being asked
   typingPromptKind: 'number', // what's shown: 'number' -> answer word, or 'word' -> answer number
+  nextDecision: null,
 };
 
 // ---- DOM refs ----------------------------------------------------------
@@ -216,8 +236,11 @@ const typingInstruction = document.getElementById('typingInstruction');
 const typingForm = document.getElementById('typingForm');
 const typingInput = document.getElementById('typingInput');
 const typingFeedback = document.getElementById('typingFeedback');
+const finishHint = document.getElementById('finishHint');
+const btnFinishTyping = document.getElementById('btnFinishTyping');
 const modeLabelEl = document.getElementById('modeLabel');
 const progressFill = document.getElementById('progressFill');
+const progressTrackEl = document.getElementById('progressTrack');
 const pairsLeftEl = document.getElementById('pairsLeft');
 const streakLabelEl = document.getElementById('streakLabel');
 const toastEl = document.getElementById('toast');
@@ -234,12 +257,13 @@ function showToast(msg){
 }
 
 // ---- Round setup --------------------------------------------------------
-function startRound(){
-  const decision = decideRoundModality();
+function startRound(preDecided){
+  const decision = preDecided || decideRoundModality();
   state.mode = decision.mode;
   state.wrongAttempts = 0;
   state.correctAttempts = 0;
   state.streak = 0;
+  state.roundCoinsEarned = 0;
   tabSwitchedDuringRound = false;
 
   if(state.mode === 'typing'){
@@ -253,6 +277,7 @@ function startMatchingRound(pool){
   modeLabelEl.textContent = 'Matching';
   board.hidden = false;
   typingPanel.hidden = true;
+  progressTrackEl.hidden = false;
 
   state.matchedCount = 0;
   state.openCard = null;
@@ -356,7 +381,7 @@ function resolveMatch(a, b){
   // as participation, but does not register as mastery progress.
   const countsForMastery = !tabSwitchedDuringRound;
   if(countsForMastery){
-    s.correct++;
+    s.correct += MODALITY_WEIGHT.matching;
   }
   state.correctAttempts++;
   state.streak++;
@@ -366,9 +391,9 @@ function resolveMatch(a, b){
     b.classList.add('is-matched');
     state.matchedCount++;
 
-    const bonus = state.streak >= 3 ? 2 : 1;
+    const bonus = (state.streak >= 3 ? 2 : 1) * MODALITY_WEIGHT.matching;
     earnCoins(bonus);
-    showToast(state.streak >= 3 ? '¡Racha! +' + bonus : '¡Correcto! +1');
+    showToast(state.streak >= 3 ? '¡Racha! +' + bonus : `¡Correcto! +${bonus}`);
 
     updateProgress();
     state.lock = false;
@@ -401,13 +426,26 @@ function resolveWrong(a, b){
 }
 
 function updateProgress(){
-  const doneCount = state.mode === 'typing' ? state.typingIndex : state.matchedCount;
-  const pct = Math.round((doneCount / state.roundTotal) * 100);
-  progressFill.style.width = pct + '%';
-  const left = state.roundTotal - doneCount;
-  const unit = state.mode === 'typing' ? (left === 1 ? '1 word left' : `${left} words left`)
-                                        : (left === 1 ? '1 pair left' : `${left} pairs left`);
-  pairsLeftEl.textContent = unit;
+  if(state.mode === 'typing'){
+    pairsLeftEl.textContent = state.typingQuestionCount === 1
+      ? '1 question so far'
+      : `${state.typingQuestionCount} questions so far`;
+
+    const unlocked = state.typingQuestionCount >= MIN_TYPING_QUESTIONS;
+    btnFinishTyping.hidden = !unlocked;
+    finishHint.hidden = unlocked;
+    if(!unlocked){
+      const remaining = MIN_TYPING_QUESTIONS - state.typingQuestionCount;
+      finishHint.textContent = remaining === 1
+        ? 'Answer 1 more question to unlock "Finish for now"'
+        : `Answer ${remaining} more questions to unlock "Finish for now"`;
+    }
+  } else {
+    const pct = Math.round((state.matchedCount / state.roundTotal) * 100);
+    progressFill.style.width = pct + '%';
+    const left = state.roundTotal - state.matchedCount;
+    pairsLeftEl.textContent = left === 1 ? '1 pair left' : `${left} pairs left`;
+  }
   streakLabelEl.textContent = `Streak: ${state.streak}`;
 }
 
@@ -429,13 +467,19 @@ function finishRound(){
     typingStat.hidden = true;
   }
 
-  const roundCoins = state.streak >= 3 ? '+' + (state.roundTotal + 2) : '+' + state.roundTotal;
+  const roundCoins = '+' + (state.roundCoinsEarned || 0);
   document.getElementById('coinsEarnedThisSession').textContent = roundCoins;
 
   const masteryNote = document.getElementById('masteryNote');
   masteryNote.textContent = tabSwitchedDuringRound
     ? 'This round\u2019s answers counted for participation, but not mastery (left the tab).'
     : 'All answers this round counted toward mastery.';
+
+  // Decide the NEXT round now, so we can show it clearly before continuing,
+  // rather than switching modality silently once the player taps Continue.
+  state.nextDecision = decideRoundModality();
+  document.getElementById('nextUpMode').textContent =
+    state.nextDecision.mode === 'typing' ? 'Typing' : 'Matching';
 
   showScreen('complete');
 }
@@ -445,15 +489,19 @@ function finishRound(){
 // tested here instead — recall (typing the answer) rather than
 // recognition (picking from two visible options), a meaningfully
 // harder modality for the adaptive system to step students up into.
+//
+// Continuous, not round-capped: a fixed small batch wasn't nearly enough
+// real practice. Typing now keeps presenting words (repeating/cycling,
+// still weighted toward struggling ones) until the student taps Finish.
 function startTypingRound(pool){
   modeLabelEl.textContent = 'Typing';
   board.hidden = true;
   typingPanel.hidden = false;
+  progressTrackEl.hidden = true; // open-ended now — a % bar doesn't apply
 
-  state.typingIndex = 0;
-  const count = Math.min(PAIRS_PER_ROUND, pool.length);
-  state.roundWords = pickWordsForRound(count, pool);
-  state.roundTotal = count;
+  state.typingPool = pool;
+  state.typingQuestionCount = 0;
+  state.roundTotal = 0; // not used to gate completion in typing mode anymore
 
   showScreen('game');
   updateProgress();
@@ -467,7 +515,11 @@ function renderTypingWord(){
   typingInput.classList.remove('is-wrong');
   typingInput.disabled = false;
 
-  const v = state.roundWords[state.typingIndex];
+  // Pick one word, weighted toward ones missed more — allows repeats,
+  // since typing is now an open-ended drill rather than a fixed set.
+  const [v] = pickWordsForRound(1, state.typingPool);
+  state.currentTypingWord = v;
+
   // Randomize direction per word: sometimes show the digit and ask for
   // the word, sometimes show the word and ask for the digit.
   state.typingPromptKind = Math.random() < 0.5 ? 'number' : 'word';
@@ -519,20 +571,27 @@ typingForm.addEventListener('submit', (e) => {
   e.preventDefault();
   if(typingInput.disabled) return; // already resolving previous answer
 
-  const v = state.roundWords[state.typingIndex];
+  const v = state.currentTypingWord;
   const expected = state.typingPromptKind === 'number' ? v.word : String(v.number);
   const given = normalizeAnswer(typingInput.value);
-  const isCorrect = given === normalizeAnswer(expected);
+
+  // When the expected answer is a number, also accept its English word
+  // (e.g. "one" counts the same as "1").
+  const acceptableAnswers = [normalizeAnswer(expected)];
+  if(state.typingPromptKind !== 'number'){
+    acceptableAnswers.push(normalizeAnswer(ENGLISH_NUMBER_WORDS[v.number]));
+  }
+  const isCorrect = acceptableAnswers.includes(given);
   const s = statsFor(v.number);
 
   if(isCorrect){
     const countsForMastery = !tabSwitchedDuringRound;
-    if(countsForMastery) s.correct++;
+    if(countsForMastery) s.correct += MODALITY_WEIGHT.typing;
     state.correctAttempts++;
     state.streak++;
-    const bonus = state.streak >= 3 ? 2 : 1;
+    const bonus = (state.streak >= 3 ? 2 : 1) * MODALITY_WEIGHT.typing;
     earnCoins(bonus);
-    typingFeedback.textContent = state.streak >= 3 ? `¡Racha! +${bonus}` : '¡Correcto!';
+    typingFeedback.textContent = state.streak >= 3 ? `¡Racha! +${bonus}` : `¡Correcto! +${bonus}`;
     typingFeedback.classList.add('correct');
   } else {
     s.wrong++;
@@ -543,19 +602,17 @@ typingForm.addEventListener('submit', (e) => {
     typingFeedback.classList.add('wrong');
   }
 
+  state.typingQuestionCount++;
   updateProgress();
-  state.typingIndex++;
   typingInput.disabled = true;
 
   setTimeout(() => {
-    if(state.typingIndex >= state.roundTotal){
-      finishRound();
-    } else {
-      renderTypingWord();
-    }
+    renderTypingWord();
   }, isCorrect ? 550 : 1100);
 });
 
+btnFinishTyping.addEventListener('click', () => finishRound());
+
 // ---- Wire up buttons ----------------------------------------------------
-document.getElementById('btnStart').addEventListener('click', startRound);
-document.getElementById('btnAgain').addEventListener('click', startRound);
+document.getElementById('btnStart').addEventListener('click', () => startRound());
+document.getElementById('btnAgain').addEventListener('click', () => startRound(state.nextDecision));

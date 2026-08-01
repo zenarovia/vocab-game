@@ -355,6 +355,27 @@ html,body{
 .typing-feedback.correct{ color:var(--turquoise); }
 .typing-feedback.wrong{ color:var(--coral); }
 
+.btn-finish{
+  margin-top:22px;
+  background:transparent;
+  border:2px solid rgba(245,239,230,0.25);
+  color:var(--cream-dim);
+  font-family:var(--font-body);
+  font-weight:700;
+  font-size:0.85rem;
+  padding:10px 20px;
+  border-radius:999px;
+  cursor:pointer;
+}
+.btn-finish:hover{ border-color:var(--axolotl-pink); color:var(--cream); }
+.finish-hint{
+  margin-top:18px;
+  font-size:0.8rem;
+  color:var(--cream-dim);
+  opacity:0.7;
+}
+.finish-hint[hidden]{ display:none; }
+
 /* ---------- Toast ---------- */
 .toast{
   position:fixed; left:50%; bottom:28px;
@@ -383,6 +404,31 @@ html,body{
   margin-bottom:14px;
 }
 .coin-earned .coin-icon{ font-size:1.1rem; }
+
+.next-up{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:2px;
+  margin-bottom:22px;
+  padding:10px 20px;
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(46,196,182,0.3);
+  border-radius:14px;
+}
+.next-up-label{
+  font-size:0.72rem;
+  text-transform:uppercase;
+  letter-spacing:1px;
+  color:var(--cream-dim);
+  font-weight:700;
+}
+.next-up-mode{
+  font-family:var(--font-display);
+  font-weight:700;
+  font-size:1.15rem;
+  color:var(--turquoise);
+}
 
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce){
