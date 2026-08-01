@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=12">
+<link rel="stylesheet" href="css/style.css?v=13">
 </head>
 <body>
 
@@ -15,7 +15,7 @@
 
   <!-- Ambient background pattern -->
   <div class="bg-pattern" aria-hidden="true"></div>
-  <div class="build-tag" aria-hidden="true">build 12</div>
+  <div class="build-tag" aria-hidden="true">build 13</div>
 
   <!-- Top bar: coin counter + mascot egg -->
   <header class="topbar">
@@ -29,13 +29,33 @@
     </div>
   </header>
 
+  <!-- Level select: always visible except mid-round. Locked levels are
+       greyed out until enough words have graduated; once unlocked, the
+       student picks which level to play next instead of the system
+       deciding automatically. -->
+  <div class="level-select" id="levelSelect" role="group" aria-label="Choose a level">
+    <button class="level-btn" id="levelBtnMatching" data-mode="matching" type="button">
+      <span class="level-icon">🧩</span>
+      <span class="level-name">Matching</span>
+    </button>
+    <button class="level-btn" id="levelBtnTyping" data-mode="typing" type="button" disabled>
+      <span class="level-icon">⌨️</span>
+      <span class="level-name">Typing</span>
+      <span class="level-lock" aria-hidden="true">🔒</span>
+    </button>
+    <button class="level-btn" id="levelBtnListening" data-mode="listening" type="button" disabled>
+      <span class="level-icon">🔊</span>
+      <span class="level-name">Listening</span>
+      <span class="level-lock" aria-hidden="true">🔒</span>
+    </button>
+  </div>
+
   <!-- START SCREEN -->
   <section class="screen" id="screen-start">
     <div class="start-card">
       <div class="egg-wobble">🥚</div>
       <h1 class="title">¡Vamos a jugar!</h1>
-      <p class="subtitle">Match each number to its word. Earn coins. Hatch something new.</p>
-      <button class="btn-primary" id="btnStart" type="button">Empezar</button>
+      <p class="subtitle">Pick a level above to begin. Match each number to its word, earn coins, hatch something new.</p>
       <p class="micro">Batch 1 &middot; Números 0–10</p>
     </div>
   </section>
@@ -111,16 +131,12 @@
         <span id="coinsEarnedThisSession">+0</span>
       </div>
       <p class="micro" id="masteryNote"></p>
-      <div class="next-up" id="nextUp">
-        <span class="next-up-label">Next up</span>
-        <span class="next-up-mode" id="nextUpMode">Matching</span>
-      </div>
-      <button class="btn-primary" id="btnAgain" type="button">Continue</button>
+      <p class="pick-next-hint">Pick your next level above</p>
     </div>
   </section>
 
 </div>
 
-<script src="js/game.js?v=12"></script>
+<script src="js/game.js?v=13"></script>
 </body>
 </html>

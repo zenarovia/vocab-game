@@ -107,44 +107,28 @@ function pickNextContinuousWord(pool){
 }
 
 
-// Full spec calls for per-word modality assignment based on that word's
-// own struggle history. This prototype approximates it at the round
-// level: once enough words are "graduated" (answered right more than
-// wrong in matching), rounds start alternating between typing and
-// listening instead — both harder modalities (recall, not recognition),
-// which the adaptive system steps students up into once they're ready.
-// Words still below that bar keep appearing in matching.
-let roundCounter = 0;
+// ---- Level unlocking + pool selection (manual level-select) -----------
+// Students now pick which level to play from the always-visible level bar,
+// rather than the system deciding automatically. Matching is always open;
+// typing and listening unlock once enough words have "graduated" (answered
+// right more than wrong in matching) — recall modes, harder than matching's
+// recognition, so they're gated behind some baseline matching success.
+const GRADUATION_THRESHOLD_COUNT = 3; // words needed before harder modes unlock
 function masteryScore(number){
   const s = statsFor(number);
   return s.correct - s.wrong;
 }
-function decideRoundModality(){
-  roundCounter++;
-  // Lowered bar: a word "graduates" after being answered correctly even
-  // once more than it's been missed, and only 3 graduated words are
-  // needed before typing/listening rounds start appearing (was 4 at
-  // score >= 2 — realistically needed way too many correct answers to
-  // ever surface during normal play/testing).
-  const graduated = VOCAB.filter(v => masteryScore(v.number) >= 1);
-  const strugglingOrNew = VOCAB.filter(v => masteryScore(v.number) < 1);
-  const readyForHarderModes = graduated.length >= 3;
-
-  if(readyForHarderModes && strugglingOrNew.length > 0){
-    // Cycle: matching, typing, matching, listening, repeat — both harder
-    // modes get regular turns instead of only ever seeing one of them.
-    const cyclePos = roundCounter % 4;
-    if(cyclePos === 2) return { mode: 'typing', pool: graduated };
-    if(cyclePos === 0) return { mode: 'listening', pool: graduated };
-    return { mode: 'matching', pool: VOCAB };
-  }
-  if(readyForHarderModes && strugglingOrNew.length === 0){
-    // Everyone's graduated — alternate the two harder modes only.
-    return roundCounter % 2 === 0
-      ? { mode: 'typing', pool: graduated }
-      : { mode: 'listening', pool: graduated };
-  }
-  return { mode: 'matching', pool: VOCAB };
+function getGraduatedWords(){
+  return VOCAB.filter(v => masteryScore(v.number) >= 1);
+}
+function isModeUnlocked(mode){
+  if(mode === 'matching') return true;
+  return getGraduatedWords().length >= GRADUATION_THRESHOLD_COUNT;
+}
+function poolForMode(mode){
+  if(mode === 'matching') return VOCAB;
+  const graduated = getGraduatedWords();
+  return graduated.length > 0 ? graduated : VOCAB;
 }
 
 // ---- Render vocab as an image, not selectable text --------------------
@@ -297,7 +281,6 @@ const state = {
   typingQuestionCount: 0,   // how many questions answered so far (open-ended)
   currentTypingWord: null,  // the word currently being asked
   typingPromptKind: 'number', // what's shown: 'number' -> answer word, or 'word' -> answer number
-  nextDecision: null,
 };
 
 // ---- DOM refs ----------------------------------------------------------
@@ -323,10 +306,34 @@ const progressTrackEl = document.getElementById('progressTrack');
 const pairsLeftEl = document.getElementById('pairsLeft');
 const streakLabelEl = document.getElementById('streakLabel');
 const toastEl = document.getElementById('toast');
+const levelSelectEl = document.getElementById('levelSelect');
+const levelButtons = {
+  matching: document.getElementById('levelBtnMatching'),
+  typing: document.getElementById('levelBtnTyping'),
+  listening: document.getElementById('levelBtnListening'),
+};
+
+function updateLevelSelect(){
+  Object.entries(levelButtons).forEach(([mode, btn]) => {
+    const unlocked = isModeUnlocked(mode);
+    btn.disabled = !unlocked;
+    btn.classList.toggle('is-active', state.mode === mode);
+  });
+}
+
+Object.entries(levelButtons).forEach(([mode, btn]) => {
+  btn.addEventListener('click', () => startRound(mode));
+});
 
 function showScreen(name){
   Object.entries(screens).forEach(([k, el]) => el.hidden = (k !== name));
   state.screen = name;
+  // Level bar is the way to choose/re-choose a level — visible except
+  // mid-round, where it would be confusing to let it interrupt play.
+  levelSelectEl.hidden = (name === 'game');
+  if(name !== 'game'){
+    updateLevelSelect();
+  }
   if(name !== 'game' && 'speechSynthesis' in window){
     window.speechSynthesis.cancel();
   }
@@ -339,19 +346,20 @@ function showToast(msg){
 }
 
 // ---- Round setup --------------------------------------------------------
-function startRound(preDecided){
-  const decision = preDecided || decideRoundModality();
-  state.mode = decision.mode;
+function startRound(mode){
+  if(!isModeUnlocked(mode)) return; // guard: ignore clicks on locked levels
+  const pool = poolForMode(mode);
+  state.mode = mode;
   state.wrongAttempts = 0;
   state.correctAttempts = 0;
   state.streak = 0;
   state.roundCoinsEarned = 0;
   tabSwitchedDuringRound = false;
 
-  if(state.mode === 'typing' || state.mode === 'listening'){
-    startTypingRound(decision.pool);
+  if(mode === 'typing' || mode === 'listening'){
+    startTypingRound(pool);
   } else {
-    startMatchingRound(decision.pool);
+    startMatchingRound(pool);
   }
 }
 
@@ -557,17 +565,15 @@ function finishRound(){
     ? 'This round\u2019s answers counted for participation, but not mastery (left the tab).'
     : 'All answers this round counted toward mastery.';
 
-  // Decide the NEXT round now, so we can show it clearly before continuing,
-  // rather than switching modality silently once the player taps Continue.
-  state.nextDecision = decideRoundModality();
-  const nextModeLabels = { typing: 'Typing', listening: 'Listening', matching: 'Matching' };
-  document.getElementById('nextUpMode').textContent = nextModeLabels[state.nextDecision.mode];
+  // Refresh the level bar now — mastery gained this round may have just
+  // unlocked typing/listening, and the student picks what's next from there.
+  updateLevelSelect();
 
   showScreen('complete');
 }
 
 // ---- Typing & listening modalities ---------------------------------------
-// Words that "graduate" out of matching (per decideRoundModality) get
+// Words that "graduate" out of matching (per isModeUnlocked/poolForMode) get
 // tested here instead — recall (typing the answer, or recognizing the
 // spoken word) rather than recognition (picking from two visible options),
 // meaningfully harder modalities for the adaptive system to step students
@@ -723,6 +729,5 @@ typingForm.addEventListener('submit', (e) => {
 
 btnFinishTyping.addEventListener('click', () => finishRound());
 
-// ---- Wire up buttons ----------------------------------------------------
-document.getElementById('btnStart').addEventListener('click', () => startRound());
-document.getElementById('btnAgain').addEventListener('click', () => startRound(state.nextDecision));
+// ---- Initial state on page load ------------------------------------------
+updateLevelSelect();
