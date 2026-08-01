@@ -14,17 +14,17 @@
 // batch, audio_url, image_url, context_sentence, modality_tags).
 // Hardcoded here for the prototype.
 const VOCAB = [
-  { number: 0,  word: 'cero' },
-  { number: 1,  word: 'uno' },
-  { number: 2,  word: 'dos' },
-  { number: 3,  word: 'tres' },
-  { number: 4,  word: 'cuatro' },
-  { number: 5,  word: 'cinco' },
-  { number: 6,  word: 'seis' },
-  { number: 7,  word: 'siete' },
-  { number: 8,  word: 'ocho' },
-  { number: 9,  word: 'nueve' },
-  { number: 10, word: 'diez' },
+  { number: 0,  word: 'cero',   audio: 'assets/audio/cero.mp3?v=2' },
+  { number: 1,  word: 'uno',    audio: 'assets/audio/uno.mp3?v=2' },
+  { number: 2,  word: 'dos',    audio: 'assets/audio/dos.mp3?v=2' },
+  { number: 3,  word: 'tres',   audio: 'assets/audio/tres.mp3?v=2' },
+  { number: 4,  word: 'cuatro', audio: 'assets/audio/cuatro.mp3?v=2' },
+  { number: 5,  word: 'cinco',  audio: 'assets/audio/cinco.mp3?v=2' },
+  { number: 6,  word: 'seis',   audio: 'assets/audio/seis.mp3?v=2' },
+  { number: 7,  word: 'siete',  audio: 'assets/audio/siete.mp3?v=2' },
+  { number: 8,  word: 'ocho',   audio: 'assets/audio/ocho.mp3?v=2' },
+  { number: 9,  word: 'nueve',  audio: 'assets/audio/nueve.mp3?v=2' },
+  { number: 10, word: 'diez',   audio: 'assets/audio/diez.mp3?v=2' },
 ];
 
 const PAIRS_PER_ROUND = 6;
@@ -79,7 +79,34 @@ function pickWordsForRound(count, pool){
   return chosen;
 }
 
-// ---- Round-level modality decision (simplified adaptive step) ---------
+// Continuous single-word picker (typing/listening) — avoids repeating any
+// of the last couple of words asked, so a heavily-weighted struggling word
+// can't come up several times in a row by chance. Falls back to allowing
+// repeats only if the pool is too small to avoid them.
+const recentContinuousWords = [];
+const RECENT_AVOID_COUNT = 2;
+function pickNextContinuousWord(pool){
+  const source = (pool && pool.length) ? pool : VOCAB;
+  const avoidSet = new Set(recentContinuousWords.slice(-RECENT_AVOID_COUNT));
+  let candidates = source.filter(v => !avoidSet.has(v.number));
+  if(candidates.length === 0) candidates = source; // pool too small — allow repeats
+
+  const weighted = candidates.map(v => {
+    const s = statsFor(v.number);
+    const weight = 1 + s.wrong * 2;
+    return { v, weight };
+  });
+  const poolArr = [];
+  weighted.forEach(({v, weight}) => { for(let i=0;i<weight;i++) poolArr.push(v); });
+  const pick = poolArr[Math.floor(Math.random() * poolArr.length)];
+
+  recentContinuousWords.push(pick.number);
+  if(recentContinuousWords.length > 5) recentContinuousWords.shift();
+
+  return pick;
+}
+
+
 // Full spec calls for per-word modality assignment based on that word's
 // own struggle history. This prototype approximates it at the round
 // level: once enough words are "graduated" (answered right more than
@@ -215,11 +242,34 @@ function earnCoins(amount){
   setTimeout(()=>coinCounterEl.classList.remove('bump'), 180);
 }
 
-// ---- Listening modality: text-to-speech ---------------------------------
-// Uses the browser's built-in speech synthesis (Web Speech API) — no audio
-// files to generate/host. Speaks the Spanish word aloud; student types the
-// number they heard. Falls back gracefully if the browser has no Spanish
-// voice available (rare, but some environments lack TTS voices entirely).
+// ---- Listening modality: audio playback -----------------------------------
+// Prefers a real generated audio file (uniform quality, works the same on
+// every device) — falls back to the browser's built-in speech synthesis
+// only if a word has no audio file yet (e.g. future vocab not recorded).
+const audioCache = {};
+function getAudioFor(word){
+  if(!word.audio) return null;
+  if(!audioCache[word.number]){
+    audioCache[word.number] = new Audio(word.audio);
+  }
+  return audioCache[word.number];
+}
+
+function playWordAudio(word){
+  const audioEl = getAudioFor(word);
+  if(audioEl){
+    audioEl.currentTime = 0;
+    audioEl.play().catch(() => {
+      // Playback blocked/failed (e.g. file missing) — fall back to TTS.
+      speakSpanish(word.word);
+    });
+    return true;
+  }
+  return speakSpanish(word.word);
+}
+
+// ---- Fallback: browser text-to-speech (Web Speech API) --------------------
+// Only used for words that don't have a real audio file yet.
 function speakSpanish(text){
   if(!('speechSynthesis' in window)) return false;
   window.speechSynthesis.cancel(); // stop any overlapping previous utterance
@@ -550,9 +600,9 @@ function renderTypingWord(){
   typingInput.classList.remove('is-wrong');
   typingInput.disabled = false;
 
-  // Pick one word, weighted toward ones missed more — allows repeats,
-  // since typing/listening are now open-ended drills rather than a fixed set.
-  const [v] = pickWordsForRound(1, state.typingPool);
+  // Pick one word, weighted toward ones missed more, while avoiding an
+  // immediate repeat of the last couple of words asked.
+  const v = pickNextContinuousWord(state.typingPool);
   state.currentTypingWord = v;
 
   if(state.mode === 'listening'){
@@ -594,7 +644,7 @@ function renderTypingWord(){
 function playCurrentListeningWord(){
   if(!state.currentTypingWord) return;
   btnPlayAudio.classList.add('is-playing');
-  const ok = speakSpanish(state.currentTypingWord.word);
+  const ok = playWordAudio(state.currentTypingWord);
   setTimeout(() => btnPlayAudio.classList.remove('is-playing'), 700);
   if(!ok){
     typingFeedback.textContent = 'Audio isn\u2019t available on this device — ask your teacher for help.';
