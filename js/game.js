@@ -90,7 +90,7 @@ function decideRoundModality(){
   if(graduated.length >= 3 && strugglingOrNew.length === 0){
     return { mode: 'typing', pool: graduated };
   }
-  return { mode: 'matching', pool: strugglingOrNew.length > 0 ? strugglingOrNew : VOCAB };
+  return { mode: 'matching', pool: VOCAB };
 }
 
 // ---- Render vocab as an image, not selectable text --------------------
