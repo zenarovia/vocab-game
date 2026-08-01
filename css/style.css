@@ -320,6 +320,12 @@ html,body{
   font-size:0.95rem;
   margin-bottom:14px;
 }
+.typing-panel.is-dictation .typing-instruction{
+  color:var(--marigold);
+}
+.typing-panel.is-dictation .typing-prompt-frame{
+  border-color:rgba(255,182,39,0.5);
+}
 .typing-prompt-frame{
   background:
     repeating-linear-gradient(135deg, var(--jungle-light) 0 8px, var(--jungle) 8px 16px);

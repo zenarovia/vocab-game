@@ -38,8 +38,16 @@ const MIN_TYPING_QUESTIONS = 10; // minimum before "Finish for now" unlocks
 const MODALITY_WEIGHT = {
   matching: 1,
   typing: 2,
-  listening: 2,
+  listening: 3,
 };
+
+// Listening's harder "dictation" tier: once a word is well-mastered
+// (masteryScore at or above this bar), listening switches from "type the
+// number you heard" (comprehension) to "type the Spanish spelling you
+// heard" (dictation — genuinely harder, real spelling-from-sound recall).
+// Worth more mastery/coins than regular listening, reflecting that.
+const DICTATION_THRESHOLD = 4;
+const DICTATION_WEIGHT = 4;
 
 // English number words 0-10 — accepted as equivalent to the digit when the
 // expected answer is a number (e.g. typing "one" counts the same as "1").
@@ -281,6 +289,7 @@ const state = {
   typingQuestionCount: 0,   // how many questions answered so far (open-ended)
   currentTypingWord: null,  // the word currently being asked
   typingPromptKind: 'number', // what's shown: 'number' -> answer word, or 'word' -> answer number
+  isDictationQuestion: false, // listening's harder tier: type Spanish spelling instead of the number
 };
 
 // ---- DOM refs ----------------------------------------------------------
@@ -612,11 +621,16 @@ function renderTypingWord(){
   state.currentTypingWord = v;
 
   if(state.mode === 'listening'){
-    // Listening always asks in one direction: hear the Spanish word,
-    // type the number — that's the actual comprehension skill being
-    // tested, rather than randomizing direction like typing does.
+    // Two tiers within listening: the easy tier tests comprehension (hear
+    // the word, type the number); once a word is well-mastered, it steps
+    // up to dictation (hear the word, type its Spanish spelling) — a
+    // genuinely harder, distinct skill (spelling from sound).
+    state.isDictationQuestion = masteryScore(v.number) >= DICTATION_THRESHOLD;
     state.typingPromptKind = 'word';
-    typingInstruction.textContent = 'Escucha y escribe el número:';
+    typingInstruction.textContent = state.isDictationQuestion
+      ? 'Escucha y escribe la palabra en español:'
+      : 'Escucha y escribe el número:';
+    typingPanel.classList.toggle('is-dictation', state.isDictationQuestion);
     typingPrompt.hidden = true;
     listeningControls.hidden = false;
     playCurrentListeningWord();
@@ -688,24 +702,29 @@ typingForm.addEventListener('submit', (e) => {
   if(typingInput.disabled) return; // already resolving previous answer
 
   const v = state.currentTypingWord;
-  const expected = state.typingPromptKind === 'number' ? v.word : String(v.number);
+  const isDictation = state.mode === 'listening' && state.isDictationQuestion;
+  const expected = isDictation
+    ? v.word
+    : (state.typingPromptKind === 'number' ? v.word : String(v.number));
   const given = normalizeAnswer(typingInput.value);
 
   // When the expected answer is a number, also accept its English word
-  // (e.g. "one" counts the same as "1").
+  // (e.g. "one" counts the same as "1"). Dictation is a pure spelling
+  // test, so no English fallback there.
   const acceptableAnswers = [normalizeAnswer(expected)];
-  if(state.typingPromptKind !== 'number'){
+  if(!isDictation && state.typingPromptKind !== 'number'){
     acceptableAnswers.push(normalizeAnswer(ENGLISH_NUMBER_WORDS[v.number]));
   }
   const isCorrect = acceptableAnswers.includes(given);
   const s = statsFor(v.number);
+  const weight = isDictation ? DICTATION_WEIGHT : MODALITY_WEIGHT[state.mode];
 
   if(isCorrect){
     const countsForMastery = !tabSwitchedDuringRound;
-    if(countsForMastery) s.correct += MODALITY_WEIGHT[state.mode];
+    if(countsForMastery) s.correct += weight;
     state.correctAttempts++;
     state.streak++;
-    const bonus = (state.streak >= 3 ? 2 : 1) * MODALITY_WEIGHT[state.mode];
+    const bonus = (state.streak >= 3 ? 2 : 1) * weight;
     earnCoins(bonus);
     typingFeedback.textContent = state.streak >= 3 ? `¡Racha! +${bonus}` : `¡Correcto! +${bonus}`;
     typingFeedback.classList.add('correct');
