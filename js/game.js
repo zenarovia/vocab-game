@@ -77,12 +77,17 @@ function masteryScore(number){
 }
 function decideRoundModality(){
   roundCounter++;
-  const graduated = VOCAB.filter(v => masteryScore(v.number) >= 2);
-  const strugglingOrNew = VOCAB.filter(v => masteryScore(v.number) < 2);
-  if(graduated.length >= 4 && strugglingOrNew.length > 0 && roundCounter % 2 === 0){
+  // Lowered bar: a word "graduates" after being answered correctly even
+  // once more than it's been missed, and only 3 graduated words are
+  // needed before typing rounds start appearing (was 4 at score >= 2 —
+  // realistically needed way too many correct answers to ever surface
+  // during normal play/testing).
+  const graduated = VOCAB.filter(v => masteryScore(v.number) >= 1);
+  const strugglingOrNew = VOCAB.filter(v => masteryScore(v.number) < 1);
+  if(graduated.length >= 3 && strugglingOrNew.length > 0 && roundCounter % 2 === 0){
     return { mode: 'typing', pool: graduated };
   }
-  if(graduated.length >= 4 && strugglingOrNew.length === 0){
+  if(graduated.length >= 3 && strugglingOrNew.length === 0){
     return { mode: 'typing', pool: graduated };
   }
   return { mode: 'matching', pool: strugglingOrNew.length > 0 ? strugglingOrNew : VOCAB };
@@ -374,11 +379,14 @@ function resolveMatch(a, b){
   }, 350);
 }
 
+// Per Twila's feedback: a mismatch here usually means "I forgot which
+// tile had which word," not "I don't know the vocabulary" — matching
+// is a location-memory game as much as a vocab game. So a mismatch
+// still gives visual feedback (for game feel) but does NOT count
+// against wordStats.wrong / mastery / graduation. Only genuine recall
+// errors in the typing modality affect mastery scoring.
 function resolveWrong(a, b){
   state.lock = true;
-  const number = Number(a.dataset.number);
-  statsFor(number).wrong++;
-  state.wrongAttempts++;
   state.streak = 0;
 
   a.classList.add('is-wrong');
@@ -404,9 +412,22 @@ function updateProgress(){
 }
 
 function finishRound(){
-  const total = state.correctAttempts + state.wrongAttempts;
-  const accuracy = total > 0 ? Math.round((state.correctAttempts/total)*100) : 100;
-  document.getElementById('finalAccuracy').textContent = accuracy;
+  const matchingStat = document.getElementById('matchingCompleteStat');
+  const typingStat = document.getElementById('typingAccuracyStat');
+
+  if(state.mode === 'typing'){
+    const total = state.correctAttempts + state.wrongAttempts;
+    const accuracy = total > 0 ? Math.round((state.correctAttempts/total)*100) : 100;
+    document.getElementById('finalAccuracy').textContent = accuracy;
+    typingStat.hidden = false;
+    matchingStat.hidden = true;
+  } else {
+    // Matching: no accuracy percentage — completion is what matters here.
+    // Mismatches during matching are a location-memory miss, not a
+    // vocabulary miss, so they intentionally don't produce a "score".
+    matchingStat.hidden = false;
+    typingStat.hidden = true;
+  }
 
   const roundCoins = state.streak >= 3 ? '+' + (state.roundTotal + 2) : '+' + state.roundTotal;
   document.getElementById('coinsEarnedThisSession').textContent = roundCoins;
