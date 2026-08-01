@@ -1,0 +1,385 @@
+/* ============================================================
+   NÚMERO NEST — design tokens
+   Palette: jungle canopy + alebrije folk-art brights
+   ============================================================ */
+:root{
+  --jungle-deep:   #0A2B2C;
+  --jungle:        #0F3D3E;
+  --jungle-light:  #17595A;
+  --axolotl-pink:  #FF7DAC;
+  --axolotl-pink-dim: #C75786;
+  --marigold:      #FFB627;
+  --turquoise:     #2EC4B6;
+  --coral:         #FF6B5E;
+  --cream:         #F5EFE6;
+  --cream-dim:     #C9C2B6;
+
+  --font-display: 'Baloo 2', system-ui, sans-serif;
+  --font-body:    'Nunito', system-ui, sans-serif;
+
+  --radius-lg: 28px;
+  --radius-md: 18px;
+  --radius-sm: 10px;
+}
+
+*{ box-sizing:border-box; margin:0; padding:0; }
+
+html,body{
+  height:100%;
+  background:var(--jungle-deep);
+  color:var(--cream);
+  font-family:var(--font-body);
+  -webkit-font-smoothing:antialiased;
+}
+
+.app{
+  position:relative;
+  min-height:100vh;
+  overflow-x:hidden;
+  display:flex;
+  flex-direction:column;
+}
+
+/* Ambient jungle-canopy pattern — quiet, textural, not decorative noise */
+.bg-pattern{
+  position:fixed; inset:0;
+  z-index:0;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(255,125,172,0.10), transparent 40%),
+    radial-gradient(circle at 85% 10%, rgba(46,196,182,0.10), transparent 35%),
+    radial-gradient(circle at 50% 90%, rgba(255,182,39,0.07), transparent 45%),
+    linear-gradient(180deg, var(--jungle) 0%, var(--jungle-deep) 100%);
+}
+
+/* ---------- Top bar ---------- */
+.topbar{
+  position:relative; z-index:2;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:18px 24px;
+}
+.brand{ display:flex; align-items:center; gap:10px; }
+.brand-mark{ font-size:1.4rem; }
+.brand-name{
+  font-family:var(--font-display);
+  font-weight:700;
+  font-size:1.15rem;
+  letter-spacing:0.2px;
+  color:var(--cream);
+}
+.coin-counter{
+  display:flex; align-items:center; gap:8px;
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,182,39,0.35);
+  padding:8px 16px;
+  border-radius:999px;
+  font-family:var(--font-display);
+  font-weight:600;
+  transition:transform 160ms ease;
+}
+.coin-counter.bump{ transform:scale(1.12); }
+.coin-icon{ color:var(--marigold); font-size:0.85rem; }
+.coin-value{ color:var(--marigold); font-size:1.05rem; }
+
+/* ---------- Screens ---------- */
+.screen{
+  position:relative; z-index:1;
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+}
+
+.start-card, .complete-card{
+  text-align:center;
+  max-width:420px;
+}
+
+.egg-wobble{
+  font-size:4rem;
+  display:inline-block;
+  animation:wobble 2.4s ease-in-out infinite;
+  margin-bottom:8px;
+}
+@keyframes wobble{
+  0%,100%{ transform:rotate(-4deg); }
+  50%{ transform:rotate(4deg); }
+}
+
+.title{
+  font-family:var(--font-display);
+  font-weight:800;
+  font-size:2.1rem;
+  color:var(--cream);
+  margin-bottom:10px;
+  letter-spacing:0.2px;
+}
+.subtitle{
+  color:var(--cream-dim);
+  font-size:1.02rem;
+  line-height:1.5;
+  margin-bottom:28px;
+}
+.micro{
+  color:var(--cream-dim);
+  font-size:0.82rem;
+  margin-top:16px;
+  opacity:0.75;
+}
+
+.btn-primary{
+  font-family:var(--font-display);
+  font-weight:700;
+  font-size:1.1rem;
+  color:var(--jungle-deep);
+  background:var(--marigold);
+  border:none;
+  padding:16px 42px;
+  border-radius:999px;
+  cursor:pointer;
+  box-shadow:0 6px 0 #C68A12, 0 8px 20px rgba(0,0,0,0.25);
+  transition:transform 100ms ease, box-shadow 100ms ease;
+}
+.btn-primary:hover{ transform:translateY(-2px); }
+.btn-primary:active{
+  transform:translateY(3px);
+  box-shadow:0 3px 0 #C68A12, 0 4px 10px rgba(0,0,0,0.2);
+}
+
+/* ---------- Game screen ---------- */
+.screen-game{ justify-content:flex-start; padding-top:8px; width:100%; max-width:640px; margin:0 auto; }
+
+.game-header{ width:100%; margin-bottom:22px; }
+.progress-track{
+  width:100%; height:10px;
+  background:rgba(255,255,255,0.08);
+  border-radius:999px;
+  overflow:hidden;
+  margin-bottom:10px;
+}
+.progress-fill{
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg, var(--turquoise), var(--axolotl-pink));
+  border-radius:999px;
+  transition:width 300ms ease;
+}
+.game-stats{
+  display:flex; gap:8px; align-items:center;
+  font-size:0.88rem; color:var(--cream-dim);
+  font-weight:700;
+}
+.game-stats .dot{ opacity:0.5; }
+
+.board{
+  display:grid;
+  grid-template-columns:repeat(4, 1fr);
+  gap:14px;
+  width:100%;
+}
+.board[hidden]{ display:none; }
+@media (max-width:520px){
+  .board{ grid-template-columns:repeat(3, 1fr); gap:10px; }
+}
+
+/* ---------- Cards: the signature element ----------
+   Alebrije-inspired papercut card backs that "unfold" open,
+   rather than a generic 3D flip. */
+.card{
+  position:relative;
+  aspect-ratio:0.82;
+  cursor:pointer;
+  perspective:900px;
+  user-select:none;
+  -webkit-user-select:none;
+}
+.card-inner{
+  position:relative; width:100%; height:100%;
+  transform-style:preserve-3d;
+  transition:transform 420ms cubic-bezier(.2,.9,.3,1.2);
+}
+.card.is-open .card-inner{ transform:rotateY(180deg); }
+
+.card-face{
+  position:absolute; inset:0;
+  border-radius:var(--radius-md);
+  display:flex; align-items:center; justify-content:center;
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+}
+.card-back{
+  background:
+    repeating-linear-gradient(135deg, var(--jungle-light) 0 8px, var(--jungle) 8px 16px);
+  border:2px solid rgba(255,125,172,0.25);
+  box-shadow: inset 0 0 0 6px var(--jungle-deep);
+}
+.card-back::after{
+  content:"";
+  width:46%; height:46%;
+  background:var(--axolotl-pink);
+  clip-path:polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  opacity:0.85;
+}
+.card-front{
+  background:var(--cream);
+  color:var(--jungle-deep);
+  transform:rotateY(180deg);
+  font-family:var(--font-display);
+  font-weight:700;
+  padding:6px;
+  text-align:center;
+  overflow:hidden;
+}
+.card-front canvas{ max-width:100%; max-height:100%; }
+
+.card.is-matched .card-front{ background:var(--turquoise); color:var(--jungle-deep); }
+.card.is-matched{ animation:matchPulse 500ms ease; }
+@keyframes matchPulse{
+  0%{ transform:scale(1); }
+  40%{ transform:scale(1.08); }
+  100%{ transform:scale(1); }
+}
+.card.is-wrong .card-inner{ animation:shake 340ms ease; }
+@keyframes shake{
+  0%,100%{ transform:rotateY(180deg) translateX(0); }
+  25%{ transform:rotateY(180deg) translateX(-6px); }
+  75%{ transform:rotateY(180deg) translateX(6px); }
+}
+
+/* ---------- Typing modality ---------- */
+.typing-panel{
+  width:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding-top:8px;
+}
+.typing-panel[hidden]{ display:none; }
+.typing-instruction{
+  color:var(--cream-dim);
+  font-weight:700;
+  font-size:0.95rem;
+  margin-bottom:14px;
+}
+.typing-prompt-frame{
+  background:
+    repeating-linear-gradient(135deg, var(--jungle-light) 0 8px, var(--jungle) 8px 16px);
+  border:2px solid rgba(255,125,172,0.25);
+  border-radius:var(--radius-lg);
+  padding:22px 30px;
+  margin-bottom:22px;
+}
+.typing-prompt{
+  background:var(--cream);
+  border-radius:var(--radius-md);
+  min-width:180px;
+  min-height:100px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:10px;
+}
+.typing-form{
+  display:flex;
+  gap:10px;
+  width:100%;
+  max-width:360px;
+}
+.typing-input{
+  flex:1;
+  font-family:var(--font-body);
+  font-weight:700;
+  font-size:1.05rem;
+  color:var(--jungle-deep);
+  background:var(--cream);
+  border:2px solid transparent;
+  border-radius:var(--radius-sm);
+  padding:14px 16px;
+  outline:none;
+}
+.typing-input:focus{ border-color:var(--turquoise); }
+.typing-input.is-wrong{ border-color:var(--coral); animation:shakeInput 340ms ease; }
+@keyframes shakeInput{
+  0%,100%{ transform:translateX(0); }
+  25%{ transform:translateX(-6px); }
+  75%{ transform:translateX(6px); }
+}
+.btn-small{
+  padding:12px 22px;
+  font-size:0.95rem;
+  box-shadow:0 4px 0 #C68A12, 0 6px 14px rgba(0,0,0,0.2);
+}
+.accent-row{
+  display:flex;
+  gap:8px;
+  margin-top:12px;
+  flex-wrap:wrap;
+  justify-content:center;
+}
+.accent-key{
+  font-family:var(--font-body);
+  font-weight:800;
+  font-size:1.15rem;
+  color:var(--jungle-deep);
+  background:var(--cream);
+  border:2px solid rgba(255,125,172,0.35);
+  border-radius:10px;
+  width:42px;
+  height:42px;
+  cursor:pointer;
+  transition:transform 100ms ease, background 100ms ease;
+}
+.accent-key:hover{ background:var(--axolotl-pink); color:var(--cream); }
+.accent-key:active{ transform:scale(0.92); }
+.typing-feedback{
+  margin-top:16px;
+  min-height:1.4em;
+  font-weight:700;
+  font-size:0.95rem;
+}
+.typing-feedback.correct{ color:var(--turquoise); }
+.typing-feedback.wrong{ color:var(--coral); }
+
+/* ---------- Toast ---------- */
+.toast{
+  position:fixed; left:50%; bottom:28px;
+  transform:translate(-50%, 20px);
+  background:var(--jungle-light);
+  border:1px solid rgba(255,255,255,0.15);
+  padding:10px 20px;
+  border-radius:999px;
+  font-weight:700;
+  font-size:0.9rem;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity 220ms ease, transform 220ms ease;
+  z-index:5;
+}
+.toast.show{ opacity:1; transform:translate(-50%, 0); }
+
+/* ---------- Complete screen ---------- */
+.complete-card{ position:relative; }
+.complete-stat{ color:var(--cream-dim); font-size:1rem; margin-bottom:18px; }
+.coin-earned{
+  display:inline-flex; align-items:center; gap:10px;
+  font-family:var(--font-display);
+  font-size:1.6rem; font-weight:800;
+  color:var(--marigold);
+  margin-bottom:14px;
+}
+.coin-earned .coin-icon{ font-size:1.1rem; }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce){
+  .egg-wobble, .card.is-matched, .card.is-wrong .card-inner{ animation:none !important; }
+  .card-inner{ transition:none !important; }
+}
+
+/* Visible keyboard focus throughout */
+.btn-primary:focus-visible,
+.card:focus-visible .card-inner{
+  outline:3px solid var(--turquoise);
+  outline-offset:3px;
+}
