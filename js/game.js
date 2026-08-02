@@ -117,11 +117,13 @@ function pickNextContinuousWord(pool){
 
 // ---- Level unlocking + pool selection (manual level-select) -----------
 // Students now pick which level to play from the always-visible level bar,
-// rather than the system deciding automatically. Matching is always open;
-// typing and listening unlock once enough words have "graduated" (answered
-// right more than wrong in matching) — recall modes, harder than matching's
-// recognition, so they're gated behind some baseline matching success.
-const GRADUATION_THRESHOLD_COUNT = 3; // words needed before harder modes unlock
+// rather than the system deciding automatically. Strictly sequential:
+// Matching is always open; Typing unlocks once enough words have
+// "graduated" out of matching; Listening only unlocks once Typing itself
+// has been sufficiently practiced — not the moment Typing unlocks.
+const GRADUATION_THRESHOLD_COUNT = 3; // words needed before Typing unlocks
+let totalTypingAnswered = 0; // practice done in Typing — gates Listening
+
 function masteryScore(number){
   const s = statsFor(number);
   return s.correct - s.wrong;
@@ -131,7 +133,9 @@ function getGraduatedWords(){
 }
 function isModeUnlocked(mode){
   if(mode === 'matching') return true;
-  return getGraduatedWords().length >= GRADUATION_THRESHOLD_COUNT;
+  if(mode === 'typing') return getGraduatedWords().length >= GRADUATION_THRESHOLD_COUNT;
+  if(mode === 'listening') return isModeUnlocked('typing') && totalTypingAnswered >= MIN_TYPING_QUESTIONS;
+  return false;
 }
 function poolForMode(mode){
   if(mode === 'matching') return VOCAB;
@@ -738,6 +742,7 @@ typingForm.addEventListener('submit', (e) => {
   }
 
   state.typingQuestionCount++;
+  if(state.mode === 'typing') totalTypingAnswered++;
   updateProgress();
   typingInput.disabled = true;
 
