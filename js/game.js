@@ -41,12 +41,9 @@ const MODALITY_WEIGHT = {
   listening: 3,
 };
 
-// Listening's harder "dictation" tier: once a word is well-mastered
-// (masteryScore at or above this bar), listening switches from "type the
-// number you heard" (comprehension) to "type the Spanish spelling you
-// heard" (dictation — genuinely harder, real spelling-from-sound recall).
-// Worth more mastery/coins than regular listening, reflecting that.
-const DICTATION_THRESHOLD = 4;
+// Dictation is its own separate, harder level (unlocked after Listening
+// is genuinely practiced) — type the Spanish spelling you heard, rather
+// than the number. Worth more than regular listening, reflecting that.
 const DICTATION_WEIGHT = 4;
 
 // English number words 0-10 — accepted as equivalent to the digit when the
@@ -118,11 +115,12 @@ function pickNextContinuousWord(pool){
 // ---- Level unlocking + pool selection (manual level-select) -----------
 // Students now pick which level to play from the always-visible level bar,
 // rather than the system deciding automatically. Strictly sequential:
-// Matching is always open; Typing unlocks once enough words have
-// "graduated" out of matching; Listening only unlocks once Typing itself
-// has been sufficiently practiced — not the moment Typing unlocks.
+// Matching → Typing → Listening → Dictation. Each level requires the
+// previous one to be both unlocked AND genuinely practiced (not just
+// unlocked a second ago) before the next one opens up.
 const GRADUATION_THRESHOLD_COUNT = 3; // words needed before Typing unlocks
-let totalTypingAnswered = 0; // practice done in Typing — gates Listening
+let totalTypingAnswered = 0;    // practice done in Typing — gates Listening
+let totalListeningAnswered = 0; // practice done in Listening — gates Dictation
 
 function masteryScore(number){
   const s = statsFor(number);
@@ -135,6 +133,7 @@ function isModeUnlocked(mode){
   if(mode === 'matching') return true;
   if(mode === 'typing') return getGraduatedWords().length >= GRADUATION_THRESHOLD_COUNT;
   if(mode === 'listening') return isModeUnlocked('typing') && totalTypingAnswered >= MIN_TYPING_QUESTIONS;
+  if(mode === 'dictation') return isModeUnlocked('listening') && totalListeningAnswered >= MIN_TYPING_QUESTIONS;
   return false;
 }
 function poolForMode(mode){
@@ -293,7 +292,6 @@ const state = {
   typingQuestionCount: 0,   // how many questions answered so far (open-ended)
   currentTypingWord: null,  // the word currently being asked
   typingPromptKind: 'number', // what's shown: 'number' -> answer word, or 'word' -> answer number
-  isDictationQuestion: false, // listening's harder tier: type Spanish spelling instead of the number
 };
 
 // ---- DOM refs ----------------------------------------------------------
@@ -324,6 +322,7 @@ const levelButtons = {
   matching: document.getElementById('levelBtnMatching'),
   typing: document.getElementById('levelBtnTyping'),
   listening: document.getElementById('levelBtnListening'),
+  dictation: document.getElementById('levelBtnDictation'),
 };
 
 function updateLevelSelect(){
@@ -369,7 +368,7 @@ function startRound(mode){
   state.roundCoinsEarned = 0;
   tabSwitchedDuringRound = false;
 
-  if(mode === 'typing' || mode === 'listening'){
+  if(mode === 'typing' || mode === 'listening' || mode === 'dictation'){
     startTypingRound(pool);
   } else {
     startMatchingRound(pool);
@@ -529,7 +528,7 @@ function resolveWrong(a, b){
 }
 
 function updateProgress(){
-  if(state.mode === 'typing' || state.mode === 'listening'){
+  if(state.mode === 'typing' || state.mode === 'listening' || state.mode === 'dictation'){
     pairsLeftEl.textContent = state.typingQuestionCount === 1
       ? '1 question so far'
       : `${state.typingQuestionCount} questions so far`;
@@ -556,7 +555,7 @@ function finishRound(){
   const matchingStat = document.getElementById('matchingCompleteStat');
   const typingStat = document.getElementById('typingAccuracyStat');
 
-  if(state.mode === 'typing' || state.mode === 'listening'){
+  if(state.mode === 'typing' || state.mode === 'listening' || state.mode === 'dictation'){
     const total = state.correctAttempts + state.wrongAttempts;
     const accuracy = total > 0 ? Math.round((state.correctAttempts/total)*100) : 100;
     document.getElementById('finalAccuracy').textContent = accuracy;
@@ -597,7 +596,7 @@ function finishRound(){
 // real practice. Both modes keep presenting words (repeating/cycling,
 // still weighted toward struggling ones) until the student taps Finish.
 function startTypingRound(pool){
-  const modeLabels = { typing: 'Typing', listening: 'Listening' };
+  const modeLabels = { typing: 'Typing', listening: 'Listening', dictation: 'Dictation' };
   modeLabelEl.textContent = modeLabels[state.mode];
   board.hidden = true;
   typingPanel.hidden = false;
@@ -624,17 +623,15 @@ function renderTypingWord(){
   const v = pickNextContinuousWord(state.typingPool);
   state.currentTypingWord = v;
 
-  if(state.mode === 'listening'){
-    // Two tiers within listening: the easy tier tests comprehension (hear
-    // the word, type the number); once a word is well-mastered, it steps
-    // up to dictation (hear the word, type its Spanish spelling) — a
-    // genuinely harder, distinct skill (spelling from sound).
-    state.isDictationQuestion = masteryScore(v.number) >= DICTATION_THRESHOLD;
+  if(state.mode === 'listening' || state.mode === 'dictation'){
+    // Both play audio, but ask for different things: listening tests
+    // comprehension (type the number you heard); dictation is a distinct,
+    // harder level testing spelling-from-sound (type the Spanish word).
     state.typingPromptKind = 'word';
-    typingInstruction.textContent = state.isDictationQuestion
+    typingInstruction.textContent = state.mode === 'dictation'
       ? 'Escucha y escribe la palabra en español:'
       : 'Escucha y escribe el número:';
-    typingPanel.classList.toggle('is-dictation', state.isDictationQuestion);
+    typingPanel.classList.toggle('is-dictation', state.mode === 'dictation');
     typingPrompt.hidden = true;
     listeningControls.hidden = false;
     playCurrentListeningWord();
@@ -706,7 +703,7 @@ typingForm.addEventListener('submit', (e) => {
   if(typingInput.disabled) return; // already resolving previous answer
 
   const v = state.currentTypingWord;
-  const isDictation = state.mode === 'listening' && state.isDictationQuestion;
+  const isDictation = state.mode === 'dictation';
   const expected = isDictation
     ? v.word
     : (state.typingPromptKind === 'number' ? v.word : String(v.number));
@@ -743,6 +740,7 @@ typingForm.addEventListener('submit', (e) => {
 
   state.typingQuestionCount++;
   if(state.mode === 'typing') totalTypingAnswered++;
+  if(state.mode === 'listening') totalListeningAnswered++;
   updateProgress();
   typingInput.disabled = true;
 
