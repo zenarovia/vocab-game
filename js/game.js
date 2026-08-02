@@ -15,16 +15,16 @@
 // Hardcoded here for the prototype.
 const VOCAB = [
   { number: 0,  word: 'cero',   audio: 'assets/audio/cero.mp3?v=2',   context: 'Hoy tengo ___ (0) tareas para la clase.' },
-  { number: 1,  word: 'uno',    audio: 'assets/audio/uno.mp3?v=2',    context: 'Tengo ___ (1) perro en mi casa.' },
-  { number: 2,  word: 'dos',    audio: 'assets/audio/dos.mp3?v=2',    context: 'Tengo ___ (2) hermanos.' },
-  { number: 3,  word: 'tres',   audio: 'assets/audio/tres.mp3?v=2',   context: 'Hay ___ (3) libros en la mesa.' },
-  { number: 4,  word: 'cuatro', audio: 'assets/audio/cuatro.mp3?v=2', context: 'Mi casa tiene ___ (4) ventanas.' },
-  { number: 5,  word: 'cinco',  audio: 'assets/audio/cinco.mp3?v=2',  context: 'Tengo ___ (5) dólares en mi mochila.' },
-  { number: 6,  word: 'seis',   audio: 'assets/audio/seis.mp3?v=2',   context: 'Hay ___ (6) estudiantes en el grupo.' },
-  { number: 7,  word: 'siete',  audio: 'assets/audio/siete.mp3?v=2',  context: 'La semana tiene ___ (7) días.' },
-  { number: 8,  word: 'ocho',   audio: 'assets/audio/ocho.mp3?v=2',   context: 'La araña tiene ___ (8) patas.' },
+  { number: 1,  word: 'uno',    audio: 'assets/audio/uno.mp3?v=2',    context: 'Tengo ___ perro en mi casa.' },
+  { number: 2,  word: 'dos',    audio: 'assets/audio/dos.mp3?v=2',    context: 'Tengo ___ manzanas en la mesa.', contextImage: 'assets/context/dos.png' },
+  { number: 3,  word: 'tres',   audio: 'assets/audio/tres.mp3?v=2',   context: 'Hay ___ libros en la mesa.', contextImage: 'assets/context/tres.png' },
+  { number: 4,  word: 'cuatro', audio: 'assets/audio/cuatro.mp3?v=2', context: 'Mi casa tiene ___ ventanas.', contextImage: 'assets/context/cuatro.png' },
+  { number: 5,  word: 'cinco',  audio: 'assets/audio/cinco.mp3?v=2',  context: 'Tengo ___ dólares en mi mochila.', contextImage: 'assets/context/cinco.png' },
+  { number: 6,  word: 'seis',   audio: 'assets/audio/seis.mp3?v=2',   context: 'Hay ___ pelotas en la caja.', contextImage: 'assets/context/seis.png' },
+  { number: 7,  word: 'siete',  audio: 'assets/audio/siete.mp3?v=2',  context: 'La semana tiene ___ días.' },
+  { number: 8,  word: 'ocho',   audio: 'assets/audio/ocho.mp3?v=2',   context: 'La araña tiene ___ patas.' },
   { number: 9,  word: 'nueve',  audio: 'assets/audio/nueve.mp3?v=2',  context: 'El partido empieza a las ___ (9).' },
-  { number: 10, word: 'diez',   audio: 'assets/audio/diez.mp3?v=2',   context: 'Tengo ___ (10) dedos en las manos.' },
+  { number: 10, word: 'diez',   audio: 'assets/audio/diez.mp3?v=2',   context: 'Tengo ___ dedos en las manos.' },
 ];
 
 const PAIRS_PER_ROUND = 6;
@@ -364,6 +364,7 @@ const screens = {
 const board = document.getElementById('board');
 const typingPanel = document.getElementById('typingPanel');
 const typingPrompt = document.getElementById('typingPrompt');
+const contextImage = document.getElementById('contextImage');
 const typingInstruction = document.getElementById('typingInstruction');
 const typingForm = document.getElementById('typingForm');
 const typingInput = document.getElementById('typingInput');
@@ -696,6 +697,8 @@ function renderTypingWord(){
     typingPanel.classList.toggle('is-dictation', state.mode === 'dictation');
     typingPrompt.hidden = true;
     listeningControls.hidden = false;
+    contextImage.hidden = true;
+    contextImage.removeAttribute('src');
     playCurrentListeningWord();
   } else if(state.mode === 'context'){
     // Fill-in-context: a full sentence with a blank, testing the word in
@@ -718,7 +721,16 @@ function renderTypingWord(){
       const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
       fitSentenceCanvas(canvas, v.context, rect.width - padX, rect.height - padY);
     });
+    if(v.contextImage){
+      contextImage.src = v.contextImage;
+      contextImage.hidden = false;
+    } else {
+      contextImage.hidden = true;
+      contextImage.removeAttribute('src');
+    }
   } else {
+    contextImage.hidden = true;
+    contextImage.removeAttribute('src');
     // Randomize direction per word: sometimes show the digit and ask for
     // the word, sometimes show the word and ask for the digit.
     state.typingPromptKind = Math.random() < 0.5 ? 'number' : 'word';
