@@ -144,6 +144,7 @@ html,body{
   justify-content:center;
   padding:24px;
 }
+.screen[hidden]{ display:none; }
 
 .start-card, .complete-card{
   text-align:center;
