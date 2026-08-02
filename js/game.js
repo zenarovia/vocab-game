@@ -14,17 +14,17 @@
 // batch, audio_url, image_url, context_sentence, modality_tags).
 // Hardcoded here for the prototype.
 const VOCAB = [
-  { number: 0,  word: 'cero',   audio: 'assets/audio/cero.mp3?v=2',   context: 'Hoy tengo ___ tareas para la clase.' },
-  { number: 1,  word: 'uno',    audio: 'assets/audio/uno.mp3?v=2',    context: 'Tengo ___ perro en mi casa.' },
-  { number: 2,  word: 'dos',    audio: 'assets/audio/dos.mp3?v=2',    context: 'Tengo ___ hermanos.' },
-  { number: 3,  word: 'tres',   audio: 'assets/audio/tres.mp3?v=2',   context: 'Hay ___ libros en la mesa.' },
-  { number: 4,  word: 'cuatro', audio: 'assets/audio/cuatro.mp3?v=2', context: 'Mi casa tiene ___ ventanas.' },
-  { number: 5,  word: 'cinco',  audio: 'assets/audio/cinco.mp3?v=2',  context: 'Tengo ___ dólares en mi mochila.' },
-  { number: 6,  word: 'seis',   audio: 'assets/audio/seis.mp3?v=2',   context: 'Hay ___ estudiantes en el grupo.' },
-  { number: 7,  word: 'siete',  audio: 'assets/audio/siete.mp3?v=2',  context: 'La semana tiene ___ días.' },
-  { number: 8,  word: 'ocho',   audio: 'assets/audio/ocho.mp3?v=2',   context: 'La araña tiene ___ patas.' },
-  { number: 9,  word: 'nueve',  audio: 'assets/audio/nueve.mp3?v=2',  context: 'El partido empieza a las ___.' },
-  { number: 10, word: 'diez',   audio: 'assets/audio/diez.mp3?v=2',   context: 'Tengo ___ dedos en las manos.' },
+  { number: 0,  word: 'cero',   audio: 'assets/audio/cero.mp3?v=2',   context: 'Hoy tengo ___ (0) tareas para la clase.' },
+  { number: 1,  word: 'uno',    audio: 'assets/audio/uno.mp3?v=2',    context: 'Tengo ___ (1) perro en mi casa.' },
+  { number: 2,  word: 'dos',    audio: 'assets/audio/dos.mp3?v=2',    context: 'Tengo ___ (2) hermanos.' },
+  { number: 3,  word: 'tres',   audio: 'assets/audio/tres.mp3?v=2',   context: 'Hay ___ (3) libros en la mesa.' },
+  { number: 4,  word: 'cuatro', audio: 'assets/audio/cuatro.mp3?v=2', context: 'Mi casa tiene ___ (4) ventanas.' },
+  { number: 5,  word: 'cinco',  audio: 'assets/audio/cinco.mp3?v=2',  context: 'Tengo ___ (5) dólares en mi mochila.' },
+  { number: 6,  word: 'seis',   audio: 'assets/audio/seis.mp3?v=2',   context: 'Hay ___ (6) estudiantes en el grupo.' },
+  { number: 7,  word: 'siete',  audio: 'assets/audio/siete.mp3?v=2',  context: 'La semana tiene ___ (7) días.' },
+  { number: 8,  word: 'ocho',   audio: 'assets/audio/ocho.mp3?v=2',   context: 'La araña tiene ___ (8) patas.' },
+  { number: 9,  word: 'nueve',  audio: 'assets/audio/nueve.mp3?v=2',  context: 'El partido empieza a las ___ (9).' },
+  { number: 10, word: 'diez',   audio: 'assets/audio/diez.mp3?v=2',   context: 'Tengo ___ (10) dedos en las manos.' },
 ];
 
 const PAIRS_PER_ROUND = 6;
