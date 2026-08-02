@@ -346,6 +346,13 @@ html,body{
   padding:10px;
 }
 .typing-prompt[hidden]{ display:none; }
+.typing-prompt.is-sentence{
+  min-width:260px;
+  max-width:420px;
+  width:100%;
+  min-height:130px;
+  padding:16px;
+}
 .listening-controls{
   display:flex;
   flex-direction:column;

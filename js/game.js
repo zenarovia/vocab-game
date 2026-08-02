@@ -14,17 +14,17 @@
 // batch, audio_url, image_url, context_sentence, modality_tags).
 // Hardcoded here for the prototype.
 const VOCAB = [
-  { number: 0,  word: 'cero',   audio: 'assets/audio/cero.mp3?v=2' },
-  { number: 1,  word: 'uno',    audio: 'assets/audio/uno.mp3?v=2' },
-  { number: 2,  word: 'dos',    audio: 'assets/audio/dos.mp3?v=2' },
-  { number: 3,  word: 'tres',   audio: 'assets/audio/tres.mp3?v=2' },
-  { number: 4,  word: 'cuatro', audio: 'assets/audio/cuatro.mp3?v=2' },
-  { number: 5,  word: 'cinco',  audio: 'assets/audio/cinco.mp3?v=2' },
-  { number: 6,  word: 'seis',   audio: 'assets/audio/seis.mp3?v=2' },
-  { number: 7,  word: 'siete',  audio: 'assets/audio/siete.mp3?v=2' },
-  { number: 8,  word: 'ocho',   audio: 'assets/audio/ocho.mp3?v=2' },
-  { number: 9,  word: 'nueve',  audio: 'assets/audio/nueve.mp3?v=2' },
-  { number: 10, word: 'diez',   audio: 'assets/audio/diez.mp3?v=2' },
+  { number: 0,  word: 'cero',   audio: 'assets/audio/cero.mp3?v=2',   context: 'Hoy tengo ___ tareas para la clase.' },
+  { number: 1,  word: 'uno',    audio: 'assets/audio/uno.mp3?v=2',    context: 'Tengo ___ perro en mi casa.' },
+  { number: 2,  word: 'dos',    audio: 'assets/audio/dos.mp3?v=2',    context: 'Tengo ___ hermanos.' },
+  { number: 3,  word: 'tres',   audio: 'assets/audio/tres.mp3?v=2',   context: 'Hay ___ libros en la mesa.' },
+  { number: 4,  word: 'cuatro', audio: 'assets/audio/cuatro.mp3?v=2', context: 'Mi casa tiene ___ ventanas.' },
+  { number: 5,  word: 'cinco',  audio: 'assets/audio/cinco.mp3?v=2',  context: 'Tengo ___ dólares en mi mochila.' },
+  { number: 6,  word: 'seis',   audio: 'assets/audio/seis.mp3?v=2',   context: 'Hay ___ estudiantes en el grupo.' },
+  { number: 7,  word: 'siete',  audio: 'assets/audio/siete.mp3?v=2',  context: 'La semana tiene ___ días.' },
+  { number: 8,  word: 'ocho',   audio: 'assets/audio/ocho.mp3?v=2',   context: 'La araña tiene ___ patas.' },
+  { number: 9,  word: 'nueve',  audio: 'assets/audio/nueve.mp3?v=2',  context: 'El partido empieza a las ___.' },
+  { number: 10, word: 'diez',   audio: 'assets/audio/diez.mp3?v=2',   context: 'Tengo ___ dedos en las manos.' },
 ];
 
 const PAIRS_PER_ROUND = 6;
@@ -45,6 +45,7 @@ const MODALITY_WEIGHT = {
 // is genuinely practiced) — type the Spanish spelling you heard, rather
 // than the number. Worth more than regular listening, reflecting that.
 const DICTATION_WEIGHT = 4;
+const CONTEXT_WEIGHT = 5; // fill-in-context — continues the increasing scale
 
 // English number words 0-10 — accepted as equivalent to the digit when the
 // expected answer is a number (e.g. typing "one" counts the same as "1").
@@ -121,6 +122,7 @@ function pickNextContinuousWord(pool){
 const GRADUATION_THRESHOLD_COUNT = 3; // words needed before Typing unlocks
 let totalTypingAnswered = 0;    // practice done in Typing — gates Listening
 let totalListeningAnswered = 0; // practice done in Listening — gates Dictation
+let totalDictationAnswered = 0; // practice done in Dictation — gates Fill-in-context
 
 function masteryScore(number){
   const s = statsFor(number);
@@ -134,6 +136,7 @@ function isModeUnlocked(mode){
   if(mode === 'typing') return getGraduatedWords().length >= GRADUATION_THRESHOLD_COUNT;
   if(mode === 'listening') return isModeUnlocked('typing') && totalTypingAnswered >= MIN_TYPING_QUESTIONS;
   if(mode === 'dictation') return isModeUnlocked('listening') && totalListeningAnswered >= MIN_TYPING_QUESTIONS;
+  if(mode === 'context') return isModeUnlocked('dictation') && totalDictationAnswered >= MIN_TYPING_QUESTIONS;
   return false;
 }
 function poolForMode(mode){
@@ -188,6 +191,64 @@ function fitWordCanvas(canvas, text, boxWidth, boxHeight){
   }
 
   ctx.fillText(text, boxWidth / 2, boxHeight / 2);
+}
+
+// Sentence version of the above — same anti-translation image-rendering
+// approach, but word-wraps across multiple lines to fit a full sentence
+// (used by fill-in-context) rather than a single short word/digit.
+function fitSentenceCanvas(canvas, text, boxWidth, boxHeight){
+  const scale = window.devicePixelRatio || 1;
+  canvas.width = Math.max(1, Math.round(boxWidth * scale));
+  canvas.height = Math.max(1, Math.round(boxHeight * scale));
+  canvas.style.width = boxWidth + 'px';
+  canvas.style.height = boxHeight + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
+  ctx.clearRect(0, 0, boxWidth, boxHeight);
+  ctx.fillStyle = '#0A2B2C';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  const paddingX = Math.max(10, boxWidth * 0.08);
+  const maxWidth = boxWidth - paddingX * 2;
+  const words = text.split(' ');
+
+  function wrapAt(fontSize){
+    ctx.font = `700 ${fontSize}px "Baloo 2", sans-serif`;
+    const lines = [];
+    let current = '';
+    words.forEach(word => {
+      const trial = current ? current + ' ' + word : word;
+      if(ctx.measureText(trial).width > maxWidth && current){
+        lines.push(current);
+        current = word;
+      } else {
+        current = trial;
+      }
+    });
+    if(current) lines.push(current);
+    return lines;
+  }
+
+  // Auto-shrink: start generous, step down until the wrapped lines fit
+  // within the box height.
+  let fontSize = Math.round(boxHeight * 0.16);
+  const minFontSize = 14;
+  let lines = wrapAt(fontSize);
+  const lineHeightOf = fs => fs * 1.35;
+  while(fontSize > minFontSize && lines.length * lineHeightOf(fontSize) > boxHeight * 0.92){
+    fontSize -= 2;
+    lines = wrapAt(fontSize);
+  }
+
+  ctx.font = `700 ${fontSize}px "Baloo 2", sans-serif`;
+  const lineHeight = lineHeightOf(fontSize);
+  const totalHeight = lines.length * lineHeight;
+  const startY = boxHeight / 2 - totalHeight / 2 + lineHeight / 2;
+  lines.forEach((line, i) => {
+    ctx.fillText(line, boxWidth / 2, startY + i * lineHeight);
+  });
 }
 
 // After web fonts finish loading, re-draw every card-front canvas so the
@@ -323,6 +384,7 @@ const levelButtons = {
   typing: document.getElementById('levelBtnTyping'),
   listening: document.getElementById('levelBtnListening'),
   dictation: document.getElementById('levelBtnDictation'),
+  context: document.getElementById('levelBtnContext'),
 };
 
 function updateLevelSelect(){
@@ -368,7 +430,7 @@ function startRound(mode){
   state.roundCoinsEarned = 0;
   tabSwitchedDuringRound = false;
 
-  if(mode === 'typing' || mode === 'listening' || mode === 'dictation'){
+  if(mode === 'typing' || mode === 'listening' || mode === 'dictation' || mode === 'context'){
     startTypingRound(pool);
   } else {
     startMatchingRound(pool);
@@ -528,7 +590,7 @@ function resolveWrong(a, b){
 }
 
 function updateProgress(){
-  if(state.mode === 'typing' || state.mode === 'listening' || state.mode === 'dictation'){
+  if(state.mode === 'typing' || state.mode === 'listening' || state.mode === 'dictation' || state.mode === 'context'){
     pairsLeftEl.textContent = state.typingQuestionCount === 1
       ? '1 question so far'
       : `${state.typingQuestionCount} questions so far`;
@@ -555,7 +617,7 @@ function finishRound(){
   const matchingStat = document.getElementById('matchingCompleteStat');
   const typingStat = document.getElementById('typingAccuracyStat');
 
-  if(state.mode === 'typing' || state.mode === 'listening' || state.mode === 'dictation'){
+  if(state.mode === 'typing' || state.mode === 'listening' || state.mode === 'dictation' || state.mode === 'context'){
     const total = state.correctAttempts + state.wrongAttempts;
     const accuracy = total > 0 ? Math.round((state.correctAttempts/total)*100) : 100;
     document.getElementById('finalAccuracy').textContent = accuracy;
@@ -596,7 +658,7 @@ function finishRound(){
 // real practice. Both modes keep presenting words (repeating/cycling,
 // still weighted toward struggling ones) until the student taps Finish.
 function startTypingRound(pool){
-  const modeLabels = { typing: 'Typing', listening: 'Listening', dictation: 'Dictation' };
+  const modeLabels = { typing: 'Typing', listening: 'Listening', dictation: 'Dictation', context: 'Fill-in-Context' };
   modeLabelEl.textContent = modeLabels[state.mode];
   board.hidden = true;
   typingPanel.hidden = false;
@@ -635,6 +697,27 @@ function renderTypingWord(){
     typingPrompt.hidden = true;
     listeningControls.hidden = false;
     playCurrentListeningWord();
+  } else if(state.mode === 'context'){
+    // Fill-in-context: a full sentence with a blank, testing the word in
+    // real usage rather than in isolation — the most advanced level, since
+    // it requires reading comprehension on top of vocabulary recall.
+    state.typingPromptKind = 'word';
+    typingInstruction.textContent = 'Completa la oración:';
+    typingPanel.classList.remove('is-dictation');
+    listeningControls.hidden = true;
+    typingPrompt.hidden = false;
+    typingPrompt.classList.add('is-sentence');
+    typingPrompt.innerHTML = '';
+    const canvas = createWordCanvas();
+    canvas.dataset.text = v.context;
+    typingPrompt.appendChild(canvas);
+    requestAnimationFrame(() => {
+      const rect = typingPrompt.getBoundingClientRect();
+      const cs = getComputedStyle(typingPrompt);
+      const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+      const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+      fitSentenceCanvas(canvas, v.context, rect.width - padX, rect.height - padY);
+    });
   } else {
     // Randomize direction per word: sometimes show the digit and ask for
     // the word, sometimes show the word and ask for the digit.
@@ -645,6 +728,7 @@ function renderTypingWord(){
       : 'Type the number for:';
 
     typingPrompt.hidden = false;
+    typingPrompt.classList.remove('is-sentence');
     listeningControls.hidden = true;
     typingPrompt.innerHTML = '';
     const canvas = createWordCanvas();
@@ -704,21 +788,22 @@ typingForm.addEventListener('submit', (e) => {
 
   const v = state.currentTypingWord;
   const isDictation = state.mode === 'dictation';
-  const expected = isDictation
+  const isContext = state.mode === 'context';
+  const expected = (isDictation || isContext)
     ? v.word
     : (state.typingPromptKind === 'number' ? v.word : String(v.number));
   const given = normalizeAnswer(typingInput.value);
 
   // When the expected answer is a number, also accept its English word
-  // (e.g. "one" counts the same as "1"). Dictation is a pure spelling
-  // test, so no English fallback there.
+  // (e.g. "one" counts the same as "1"). Dictation and fill-in-context
+  // are pure Spanish-word tests, so no English fallback there.
   const acceptableAnswers = [normalizeAnswer(expected)];
-  if(!isDictation && state.typingPromptKind !== 'number'){
+  if(!isDictation && !isContext && state.typingPromptKind !== 'number'){
     acceptableAnswers.push(normalizeAnswer(ENGLISH_NUMBER_WORDS[v.number]));
   }
   const isCorrect = acceptableAnswers.includes(given);
   const s = statsFor(v.number);
-  const weight = isDictation ? DICTATION_WEIGHT : MODALITY_WEIGHT[state.mode];
+  const weight = isContext ? CONTEXT_WEIGHT : (isDictation ? DICTATION_WEIGHT : MODALITY_WEIGHT[state.mode]);
 
   if(isCorrect){
     const countsForMastery = !tabSwitchedDuringRound;
@@ -741,6 +826,7 @@ typingForm.addEventListener('submit', (e) => {
   state.typingQuestionCount++;
   if(state.mode === 'typing') totalTypingAnswered++;
   if(state.mode === 'listening') totalListeningAnswered++;
+  if(state.mode === 'dictation') totalDictationAnswered++;
   updateProgress();
   typingInput.disabled = true;
 
