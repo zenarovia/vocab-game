@@ -451,8 +451,10 @@ const setSelectEl = document.getElementById('setSelect');
 const setCurrentBtn = document.getElementById('setCurrentBtn');
 const setCurrentName = document.getElementById('setCurrentName');
 const setReviewBadge = document.getElementById('setReviewBadge');
+const setAssignedBadge = document.getElementById('setAssignedBadge');
 const setDropdown = document.getElementById('setDropdown');
 let activeSetId = VocabBackend.DEFAULT_SET_ID;
+let assignedSetId = null; // teacher-assigned set for this student's class period, if any
 const levelButtons = {
   matching: document.getElementById('levelBtnMatching'),
   typing: document.getElementById('levelBtnTyping'),
@@ -502,7 +504,12 @@ async function updateReviewStatus(){
   });
   const activeOrder = VOCAB_SETS[activeSetId] ? VOCAB_SETS[activeSetId].order : 0;
   isReviewSet = activeOrder < frontierOrder;
+  // The assigned set is what a student is expected to be working toward —
+  // it always pays full points even if they've technically moved past it
+  // in raw sequence order (e.g. a fast student who got further ahead).
+  if(assignedSetId && activeSetId === assignedSetId) isReviewSet = false;
   setReviewBadge.hidden = !isReviewSet;
+  setAssignedBadge.hidden = !(assignedSetId && activeSetId === assignedSetId);
 }
 
 function applyReviewMultiplier(points){
@@ -525,9 +532,12 @@ async function renderSetSelect(){
     opt.setAttribute('role', 'option');
     opt.disabled = !unlocked;
     opt.classList.toggle('is-active', set.id === activeSetId);
+    const assignedTag = (assignedSetId && set.id === assignedSetId)
+      ? ' <span class="set-option-assigned">Assigned</span>'
+      : '';
     opt.innerHTML = unlocked
-      ? set.name
-      : `${set.name} <span class="set-option-lock" aria-hidden="true">🔒</span>`;
+      ? `${set.name}${assignedTag}`
+      : `${set.name}${assignedTag} <span class="set-option-lock" aria-hidden="true">🔒</span>`;
     opt.addEventListener('click', () => {
       if(!unlocked) return;
       closeSetDropdown();
@@ -1412,6 +1422,12 @@ async function initApp(){
 
   if(!profile){
     profile = await promptForStudentSetup();
+  }
+
+  assignedSetId = await VocabBackend.getAssignedSetForClassPeriod(profile.class_period);
+  if(assignedSetId && VOCAB_SETS[assignedSetId] && assignedSetId !== activeSetId){
+    activeSetId = assignedSetId;
+    VOCAB = VOCAB_SETS[assignedSetId].words;
   }
 
   await hydrateFromBackend();

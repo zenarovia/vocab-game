@@ -141,6 +141,17 @@ html,body{
   border-radius:999px;
 }
 .set-review-badge[hidden]{ display:none; }
+.set-assigned-badge{
+  font-size:0.68rem;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.3px;
+  color:var(--jungle-deep);
+  background:var(--turquoise);
+  padding:3px 9px;
+  border-radius:999px;
+}
+.set-assigned-badge[hidden]{ display:none; }
 
 .set-dropdown{
   position:absolute;
@@ -180,6 +191,13 @@ html,body{
 }
 .set-option:disabled:hover{ background:transparent; }
 .set-option-lock{ font-size:0.78rem; margin-left:4px; }
+.set-option-assigned{
+  font-size:0.62rem;
+  font-weight:700;
+  text-transform:uppercase;
+  color:var(--turquoise);
+  margin-left:6px;
+}
 
 .level-select{
   position:relative; z-index:2;

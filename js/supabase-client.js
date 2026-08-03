@@ -115,6 +115,25 @@ async function isSetFullyGraduated(setId){
   return wordIds.every(id => graduatedIds.has(id));
 }
 
+// Checks whether a teacher has assigned a specific set for this class
+// period. Returns the assigned set_id, or null if none/no class period.
+// (Setting the assignment itself is done directly in Supabase's Table
+// Editor for now — see README for the exact steps — until a real
+// teacher-facing admin screen exists.)
+async function getAssignedSetForClassPeriod(classPeriod){
+  if(!classPeriod) return null;
+  const { data, error } = await sb
+    .from('set_assignments')
+    .select('set_id')
+    .eq('class_period', classPeriod)
+    .maybeSingle();
+  if(error){
+    console.error('Failed to check set assignment:', error);
+    return null;
+  }
+  return data ? data.set_id : null;
+}
+
 async function loadStudentProgress(setId){
   if(!currentStudentId) return { wordStatsByMode: {}, modeCounts: {}, coins: 0 };
 
@@ -210,4 +229,5 @@ window.VocabBackend = {
   saveModeCount,
   saveCoins,
   isSetFullyGraduated,
+  getAssignedSetForClassPeriod,
 };
