@@ -91,7 +91,7 @@ async function loadWordIdsForSet(setId){
 }
 
 async function loadStudentProgress(setId){
-  if(!currentStudentId) return { wordStats: {}, modeCounts: {}, coins: 0 };
+  if(!currentStudentId) return { wordStatsByMode: {}, modeCounts: {}, coins: 0 };
 
   wordIdByNumber = await loadWordIdsForSet(setId);
   numberByWordId = {};
@@ -100,7 +100,7 @@ async function loadStudentProgress(setId){
 
   const [progressResult, modeResult, coinResult] = await Promise.all([
     sb.from('word_progress')
-      .select('word_id, correct_count, wrong_count')
+      .select('word_id, mode, correct_count, wrong_count')
       .eq('student_id', currentStudentId)
       .in('word_id', wordIds.length ? wordIds : [-1]),
     sb.from('mode_practice_counts')
@@ -117,11 +117,12 @@ async function loadStudentProgress(setId){
   if(modeResult.error) console.error('Failed to load mode counts:', modeResult.error);
   if(coinResult.error) console.error('Failed to load coins:', coinResult.error);
 
-  const wordStats = {};
+  const wordStatsByMode = {};
   (progressResult.data || []).forEach(row => {
     const num = numberByWordId[row.word_id];
     if(num !== undefined){
-      wordStats[num] = { correct: row.correct_count, wrong: row.wrong_count };
+      if(!wordStatsByMode[row.mode]) wordStatsByMode[row.mode] = {};
+      wordStatsByMode[row.mode][num] = { correct: row.correct_count, wrong: row.wrong_count };
     }
   });
 
@@ -131,7 +132,7 @@ async function loadStudentProgress(setId){
   });
 
   return {
-    wordStats,
+    wordStatsByMode,
     modeCounts,
     coins: coinResult.data ? coinResult.data.total_coins : 0,
   };
@@ -141,12 +142,13 @@ async function loadStudentProgress(setId){
 // Fire-and-forget: the UI updates immediately from local state, these
 // just persist that state in the background. Errors are logged, not
 // shown to the student — a failed save shouldn't interrupt play.
-function saveWordProgress(number, correct, wrong){
+function saveWordProgress(mode, number, correct, wrong){
   const wordId = wordIdByNumber[number];
   if(!currentStudentId || !wordId) return;
   sb.from('word_progress').upsert({
     student_id: currentStudentId,
     word_id: wordId,
+    mode: mode,
     correct_count: correct,
     wrong_count: wrong,
     updated_at: new Date().toISOString(),

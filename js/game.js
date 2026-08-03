@@ -74,26 +74,31 @@ const BONUS_WEIGHT = 6;   // bonus games (math facts, true/false, odd-one-out) �
 const ENGLISH_NUMBER_WORDS = ['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen','twenty'];
 
 // ---- Per-word performance memory -------------------------------------
-// Persisted per student via Supabase — hydrated on load in initApp(),
-// and every change is saved through markWordStatsChanged() below.
-let wordStats = {}; // number -> { wrong: 0, correct: 0 }
-function statsFor(n){
-  if(!wordStats[n]) wordStats[n] = { wrong: 0, correct: 0 };
-  return wordStats[n];
+// Tracked per ACTIVITY (mode), not shared across all of them — doing
+// well on a word in Typing shouldn't quietly make it rare in Listening
+// too. Persisted per student via Supabase (word_progress now has a mode
+// column — see migration-per-mode-progress.sql), hydrated on load in
+// initApp(), and every change is saved through markWordStatsChanged().
+let wordStatsByMode = {}; // mode -> number -> { wrong: 0, correct: 0 }
+function statsFor(mode, n){
+  if(!wordStatsByMode[mode]) wordStatsByMode[mode] = {};
+  if(!wordStatsByMode[mode][n]) wordStatsByMode[mode][n] = { wrong: 0, correct: 0 };
+  return wordStatsByMode[mode][n];
 }
-function markWordStatsChanged(number){
-  const s = statsFor(number);
-  VocabBackend.saveWordProgress(number, s.correct, s.wrong);
+function markWordStatsChanged(mode, number){
+  const s = statsFor(mode, number);
+  VocabBackend.saveWordProgress(mode, number, s.correct, s.wrong);
 }
 
-// Weighted pick: words with more wrong attempts are more likely to
-// resurface. This is the "adaptive-lite" stand-in for the real
-// per-word adaptive-difficulty engine described in the full spec.
-function pickWordsForRound(count, pool){
+// Weighted pick: words missed more within THIS activity resurface a bit
+// more often — capped, not multiplied, so a couple of struggling words
+// can't crowd out the rest of the set and shrink the effective pool
+// back down to just a few repeating questions.
+function pickWordsForRound(count, pool, mode){
   const source = pool || VOCAB;
   const weighted = source.map(v => {
-    const s = statsFor(v.number);
-    const weight = 1 + s.wrong * 2; // struggling words appear more often
+    const s = statsFor(mode, v.number);
+    const weight = 1 + Math.min(s.wrong, 3); // capped nudge, not a multiplier
     return { v, weight };
   });
   const poolArr = [];
@@ -111,21 +116,21 @@ function pickWordsForRound(count, pool){
   return chosen;
 }
 
-// Continuous single-word picker (typing/listening) — avoids repeating any
-// of the last couple of words asked, so a heavily-weighted struggling word
-// can't come up several times in a row by chance. Falls back to allowing
-// repeats only if the pool is too small to avoid them.
+// Continuous single-word picker (typing/listening/etc.) — avoids
+// repeating any of the last few words asked, so a heavily-weighted
+// struggling word can't come up several times in a row by chance.
+// Falls back to allowing repeats only if the pool is too small.
 const recentContinuousWords = [];
-const RECENT_AVOID_COUNT = 2;
-function pickNextContinuousWord(pool){
+const RECENT_AVOID_COUNT = 3;
+function pickNextContinuousWord(pool, mode){
   const source = (pool && pool.length) ? pool : VOCAB;
   const avoidSet = new Set(recentContinuousWords.slice(-RECENT_AVOID_COUNT));
   let candidates = source.filter(v => !avoidSet.has(v.number));
   if(candidates.length === 0) candidates = source; // pool too small — allow repeats
 
   const weighted = candidates.map(v => {
-    const s = statsFor(v.number);
-    const weight = 1 + s.wrong * 2;
+    const s = statsFor(mode, v.number);
+    const weight = 1 + Math.min(s.wrong, 3); // capped nudge, not a multiplier — keeps the full set in real rotation
     return { v, weight };
   });
   const poolArr = [];
@@ -153,7 +158,7 @@ let totalContextAnswered = 0;   // practice done in Context — gates Speed
 let totalSpeedAnswered = 0;     // practice done in Speed — gates Bonus
 
 function masteryScore(number){
-  const s = statsFor(number);
+  const s = statsFor('matching', number);
   return s.correct - s.wrong;
 }
 function getGraduatedWords(){
@@ -170,9 +175,13 @@ function isModeUnlocked(mode){
   return false;
 }
 function poolForMode(mode){
-  if(mode === 'matching') return VOCAB;
-  const graduated = getGraduatedWords();
-  return graduated.length > 0 ? graduated : VOCAB;
+  // Every level draws from the full set — the sequential unlock system
+  // (isModeUnlocked) already ensures real competence before a harder
+  // level opens up. Restricting the actual question pool further, to
+  // only words that happened to graduate first, caused severe
+  // repetition (as few as 3 words in rotation) once a student reached
+  // the later levels.
+  return VOCAB;
 }
 
 // ---- Render vocab as an image, not selectable text --------------------
@@ -492,7 +501,7 @@ function startMatchingRound(pool){
   state.lock = false;
 
   const count = Math.min(PAIRS_PER_ROUND, pool.length);
-  state.roundWords = pickWordsForRound(count, pool);
+  state.roundWords = pickWordsForRound(count, pool, 'matching');
   state.roundTotal = count;
 
   // Build card list: one "digit" card + one "word" card per vocab item —
@@ -583,14 +592,14 @@ function onCardClick(cardEl){
 function resolveMatch(a, b){
   state.lock = true;
   const number = Number(a.dataset.number);
-  const s = statsFor(number);
+  const s = statsFor('matching', number);
 
   // Tab-switch guard: correct answer still resolves visually and counts
   // as participation, but does not register as mastery progress.
   const countsForMastery = !tabSwitchedDuringRound;
   if(countsForMastery){
     s.correct += MODALITY_WEIGHT.matching;
-    markWordStatsChanged(number);
+    markWordStatsChanged('matching', number);
   }
   state.correctAttempts++;
   state.streak++;
@@ -762,7 +771,7 @@ function pickMathFactsQuestion(){
 }
 
 function pickTrueFalseQuestion(){
-  const v = pickNextContinuousWord(state.typingPool);
+  const v = pickNextContinuousWord(state.typingPool, state.mode);
   const isTrue = Math.random() < 0.5;
   let displayNumber = v.number;
   if(!isTrue){
@@ -815,16 +824,16 @@ function resolveBonusClick(isCorrect, attributedNumber, wrongFeedbackText){
   stopSpeedTimer();
 
   if(attributedNumber !== null && attributedNumber !== undefined){
-    const s = statsFor(attributedNumber);
+    const s = statsFor('bonus', attributedNumber);
     if(isCorrect){
       const countsForMastery = !tabSwitchedDuringRound;
       if(countsForMastery){
         s.correct += BONUS_WEIGHT;
-        markWordStatsChanged(attributedNumber);
+        markWordStatsChanged('bonus', attributedNumber);
       }
     } else {
       s.wrong++;
-      markWordStatsChanged(attributedNumber);
+      markWordStatsChanged('bonus', attributedNumber);
     }
   }
 
@@ -882,7 +891,7 @@ function renderTypingWord(){
 
   // Pick one word, weighted toward ones missed more, while avoiding an
   // immediate repeat of the last couple of words asked.
-  const v = pickNextContinuousWord(state.typingPool);
+  const v = pickNextContinuousWord(state.typingPool, state.mode);
   state.currentTypingWord = v;
 
   if(state.mode === 'listening' || state.mode === 'dictation'){
@@ -1092,7 +1101,7 @@ function resolveTypingAnswer(rawGiven){
     normalizeAnswer(ENGLISH_NUMBER_WORDS[v.number]),
   ];
   const isCorrect = given.length > 0 && acceptableAnswers.includes(given);
-  const s = statsFor(v.number);
+  const s = statsFor(state.mode, v.number);
   const weight = isContext ? CONTEXT_WEIGHT
     : isDictation ? DICTATION_WEIGHT
     : isSpeed ? SPEED_WEIGHT
@@ -1103,7 +1112,7 @@ function resolveTypingAnswer(rawGiven){
     const countsForMastery = !tabSwitchedDuringRound;
     if(countsForMastery){
       s.correct += weight;
-      markWordStatsChanged(v.number);
+      markWordStatsChanged(state.mode, v.number);
     }
     state.correctAttempts++;
     state.streak++;
@@ -1113,7 +1122,7 @@ function resolveTypingAnswer(rawGiven){
     typingFeedback.classList.add('correct');
   } else {
     s.wrong++;
-    markWordStatsChanged(v.number);
+    markWordStatsChanged(state.mode, v.number);
     state.wrongAttempts++;
     state.streak = 0;
     typingInput.classList.add('is-wrong');
@@ -1186,7 +1195,7 @@ function promptForStudentSetup(){
 async function hydrateFromBackend(){
   const progress = await VocabBackend.loadStudentProgress(VocabBackend.CURRENT_SET_ID);
 
-  wordStats = progress.wordStats || {};
+  wordStatsByMode = progress.wordStatsByMode || {};
   coins = progress.coins || 0;
   coinValueEl.textContent = coins;
 
