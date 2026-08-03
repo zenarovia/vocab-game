@@ -447,6 +447,9 @@ const streakLabelEl = document.getElementById('streakLabel');
 const toastEl = document.getElementById('toast');
 const levelSelectEl = document.getElementById('levelSelect');
 const setSelectEl = document.getElementById('setSelect');
+const setCurrentBtn = document.getElementById('setCurrentBtn');
+const setCurrentName = document.getElementById('setCurrentName');
+const setDropdown = document.getElementById('setDropdown');
 let activeSetId = VocabBackend.DEFAULT_SET_ID;
 const levelButtons = {
   matching: document.getElementById('levelBtnMatching'),
@@ -475,19 +478,41 @@ function updateLevelSelect(){
 // genuinely independent — this was already true on the backend, this
 // just makes the frontend actually let you get to a second set).
 function renderSetSelect(){
-  setSelectEl.innerHTML = '';
+  const activeSet = VOCAB_SETS[activeSetId];
+  setCurrentName.textContent = activeSet ? activeSet.name : activeSetId;
+
+  setDropdown.innerHTML = '';
   Object.values(VOCAB_SETS).forEach(set => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'set-btn';
-    btn.textContent = set.name;
-    btn.classList.toggle('is-active', set.id === activeSetId);
-    btn.addEventListener('click', () => {
+    const opt = document.createElement('button');
+    opt.type = 'button';
+    opt.className = 'set-option';
+    opt.textContent = set.name;
+    opt.setAttribute('role', 'option');
+    opt.classList.toggle('is-active', set.id === activeSetId);
+    opt.addEventListener('click', () => {
+      closeSetDropdown();
       if(set.id !== activeSetId) switchToSet(set.id);
     });
-    setSelectEl.appendChild(btn);
+    setDropdown.appendChild(opt);
   });
 }
+
+function openSetDropdown(){
+  setDropdown.hidden = false;
+  setCurrentBtn.classList.add('is-open');
+  setCurrentBtn.setAttribute('aria-expanded', 'true');
+}
+function closeSetDropdown(){
+  setDropdown.hidden = true;
+  setCurrentBtn.classList.remove('is-open');
+  setCurrentBtn.setAttribute('aria-expanded', 'false');
+}
+setCurrentBtn.addEventListener('click', () => {
+  if(setDropdown.hidden) openSetDropdown(); else closeSetDropdown();
+});
+document.addEventListener('click', (e) => {
+  if(!setDropdown.hidden && !setSelectEl.contains(e.target)) closeSetDropdown();
+});
 
 async function switchToSet(setId){
   const set = VOCAB_SETS[setId];

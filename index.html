@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=32">
+<link rel="stylesheet" href="css/style.css?v=33">
 </head>
 <body>
 
@@ -15,7 +15,7 @@
 
   <!-- Ambient background pattern -->
   <div class="bg-pattern" aria-hidden="true"></div>
-  <div class="build-tag" aria-hidden="true">build 32</div>
+  <div class="build-tag" aria-hidden="true">build 33</div>
 
   <!-- Top bar: coin counter + mascot egg -->
   <header class="topbar">
@@ -29,9 +29,18 @@
     </div>
   </header>
 
-  <!-- Set select: choose which vocabulary set to work on. Visible
-       alongside the level bar (except mid-round). -->
-  <div class="set-select" id="setSelect" role="group" aria-label="Choose a vocabulary set"></div>
+  <!-- Set select: current/assigned set stays prominent; other available
+       sets live in a dropdown so this scales to a large library instead
+       of a wall of buttons. Visible alongside the level bar (except
+       mid-round). -->
+  <div class="set-select" id="setSelect">
+    <button class="set-current-btn" id="setCurrentBtn" type="button" aria-haspopup="listbox" aria-expanded="false">
+      <span class="set-current-label">Working on</span>
+      <span class="set-current-name" id="setCurrentName">Numbers 0-10</span>
+      <span class="set-current-chevron" aria-hidden="true">▾</span>
+    </button>
+    <div class="set-dropdown" id="setDropdown" role="listbox" hidden></div>
+  </div>
 
   <!-- Level select: always visible except mid-round. Locked levels are
        greyed out until enough words have graduated; once unlocked, the
@@ -211,6 +220,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase-client.js"></script>
-<script src="js/game.js?v=32"></script>
+<script src="js/game.js?v=33"></script>
 </body>
 </html>
