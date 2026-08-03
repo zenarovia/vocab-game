@@ -13,9 +13,13 @@
 // In production this comes from the CSV pipeline (number, word_es,
 // batch, audio_url, image_url, context_sentence, modality_tags).
 // Hardcoded here for the prototype.
-const VOCAB = [
-  { number: 0,  word: 'cero',   audio: 'assets/audio/cero.mp3?v=2',   context: 'Hoy tengo ___ (0) tareas para la clase.' },
-  { number: 1,  word: 'uno',    audio: 'assets/audio/uno.mp3?v=2',    context: 'Tengo ___ perro en mi casa.' },
+// Two separate sets, per Twila's request — batch 1 (0-10) and batch 2
+// (11-20) are distinct vocabulary sets, not one merged list. Only
+// VOCAB_SET_1 is currently wired into the live game; VOCAB_SET_2 is
+// prepared content, waiting on the multi-set switching UI (not yet built).
+const VOCAB_SET_1 = [
+  { number: 0,  word: 'cero',   audio: 'assets/audio/cero.mp3?v=2',   context: 'Cinco menos cinco son ___.' },
+  { number: 1,  word: 'uno',    audio: 'assets/audio/uno.mp3?v=2',    context: 'Tres menos dos son ___.' },
   { number: 2,  word: 'dos',    audio: 'assets/audio/dos.mp3?v=2',    context: 'Tengo ___ manzanas en la mesa.', contextImage: 'assets/context/dos.png' },
   { number: 3,  word: 'tres',   audio: 'assets/audio/tres.mp3?v=2',   context: 'Hay ___ libros en la mesa.', contextImage: 'assets/context/tres.png' },
   { number: 4,  word: 'cuatro', audio: 'assets/audio/cuatro.mp3?v=2', context: 'Mi casa tiene ___ ventanas.', contextImage: 'assets/context/cuatro.png' },
@@ -23,19 +27,24 @@ const VOCAB = [
   { number: 6,  word: 'seis',   audio: 'assets/audio/seis.mp3?v=2',   context: 'Hay ___ pelotas en la caja.', contextImage: 'assets/context/seis.png' },
   { number: 7,  word: 'siete',  audio: 'assets/audio/siete.mp3?v=2',  context: 'La semana tiene ___ días.' },
   { number: 8,  word: 'ocho',   audio: 'assets/audio/ocho.mp3?v=2',   context: 'La araña tiene ___ patas.' },
-  { number: 9,  word: 'nueve',  audio: 'assets/audio/nueve.mp3?v=2',  context: 'El partido empieza a las ___ (9).' },
+  { number: 9,  word: 'nueve',  audio: 'assets/audio/nueve.mp3?v=2',  context: 'Cuatro más cinco son ___.' },
   { number: 10, word: 'diez',   audio: 'assets/audio/diez.mp3?v=2',   context: 'Tengo ___ dedos en las manos.' },
-  { number: 11, word: 'once',       audio: 'assets/audio/once.mp3',       context: 'Tengo ___ (11) lápices en mi mochila.' },
-  { number: 12, word: 'doce',       audio: 'assets/audio/doce.mp3',       context: 'Una docena tiene ___ huevos.' },
-  { number: 13, word: 'trece',      audio: 'assets/audio/trece.mp3',      context: 'Tengo ___ (13) canicas en la bolsa.' },
-  { number: 14, word: 'catorce',    audio: 'assets/audio/catorce.mp3',    context: 'El día de San Valentín es el ___ de febrero.' },
-  { number: 15, word: 'quince',     audio: 'assets/audio/quince.mp3',     context: 'Una quinceañera cumple ___ años.' },
-  { number: 16, word: 'dieciséis',  audio: 'assets/audio/dieciseis.mp3',  context: 'Tengo ___ (16) crayones en la caja.' },
-  { number: 17, word: 'diecisiete', audio: 'assets/audio/diecisiete.mp3', context: 'Hay ___ (17) estrellas en el dibujo.' },
-  { number: 18, word: 'dieciocho',  audio: 'assets/audio/dieciocho.mp3',  context: 'A los ___ años, puedes votar en Estados Unidos.' },
-  { number: 19, word: 'diecinueve', audio: 'assets/audio/diecinueve.mp3', context: 'Tengo ___ (19) monedas en el bolsillo.' },
-  { number: 20, word: 'veinte',     audio: 'assets/audio/veinte.mp3',     context: 'Dos personas tienen ___ dedos en total.' },
 ];
+
+const VOCAB_SET_2 = [
+  { number: 11, word: 'once',       audio: 'assets/audio/once.mp3',       context: 'Cinco más seis son ___.' },
+  { number: 12, word: 'doce',       audio: 'assets/audio/doce.mp3',       context: 'Una docena tiene ___ huevos.' },
+  { number: 13, word: 'trece',      audio: 'assets/audio/trece.mp3',      context: 'Seis más siete son ___.' },
+  { number: 14, word: 'catorce',    audio: 'assets/audio/catorce.mp3',    context: 'El día de San Valentín es el ___ de febrero.' },
+  { number: 15, word: 'quince',     audio: 'assets/audio/quince.mp3',     context: 'Siete más ocho son ___.' },
+  { number: 16, word: 'dieciséis',  audio: 'assets/audio/dieciseis.mp3',  context: 'Ocho más ocho son ___.' },
+  { number: 17, word: 'diecisiete', audio: 'assets/audio/diecisiete.mp3', context: 'Diez más siete son ___.' },
+  { number: 18, word: 'dieciocho',  audio: 'assets/audio/dieciocho.mp3',  context: 'A los ___ años, puedes votar en Estados Unidos.' },
+  { number: 19, word: 'diecinueve', audio: 'assets/audio/diecinueve.mp3', context: 'Diez más nueve son ___.' },
+  { number: 20, word: 'veinte',     audio: 'assets/audio/veinte.mp3',     context: 'Diez más diez son ___.' },
+];
+
+const VOCAB = VOCAB_SET_1;
 
 const PAIRS_PER_ROUND = 6;
 const MIN_TYPING_QUESTIONS = 10; // minimum before "Finish for now" unlocks
@@ -57,7 +66,7 @@ const MODALITY_WEIGHT = {
 const DICTATION_WEIGHT = 4;
 const CONTEXT_WEIGHT = 5; // fill-in-context — continues the increasing scale
 const SPEED_WEIGHT = 6;   // speed challenge — the hardest, final level
-const SPEED_TIME_LIMIT_MS = 6000; // seconds to answer before it's marked wrong
+const SPEED_TIME_LIMIT_MS = 9000; // milliseconds to answer before it's marked wrong
 const BONUS_WEIGHT = 6;   // bonus games (math facts, true/false, odd-one-out) — reward/review tier, same weight as Speed
 
 // English number words 0-10 — accepted as equivalent to the digit when the
@@ -1072,18 +1081,16 @@ function resolveTypingAnswer(rawGiven){
   const isDictation = state.mode === 'dictation';
   const isContext = state.mode === 'context';
   const isSpeed = state.mode === 'speed';
-  const expected = (isDictation || isContext)
-    ? v.word
-    : (state.typingPromptKind === 'number' ? v.word : String(v.number));
+  const expected = v.word; // shown in feedback as the "correct answer"
   const given = normalizeAnswer(rawGiven);
 
-  // When the expected answer is a number, also accept its English word
-  // (e.g. "one" counts the same as "1"). Dictation and fill-in-context
-  // are pure Spanish-word tests, so no English fallback there.
-  const acceptableAnswers = [normalizeAnswer(expected)];
-  if(!isDictation && !isContext && state.typingPromptKind !== 'number'){
-    acceptableAnswers.push(normalizeAnswer(ENGLISH_NUMBER_WORDS[v.number]));
-  }
+  // Accept the Spanish word, the digit, or the English word — any of the
+  // three ways a student might reasonably answer, regardless of mode.
+  const acceptableAnswers = [
+    normalizeAnswer(v.word),
+    normalizeAnswer(String(v.number)),
+    normalizeAnswer(ENGLISH_NUMBER_WORDS[v.number]),
+  ];
   const isCorrect = given.length > 0 && acceptableAnswers.includes(given);
   const s = statsFor(v.number);
   const weight = isContext ? CONTEXT_WEIGHT
