@@ -16,7 +16,7 @@ const SUPABASE_KEY = 'sb_publishable_QmKsson3W2-X3Cj7eWFk_w_H_7FkDNv';
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const CURRENT_SET_ID = 'numbers-0-10';
+const DEFAULT_SET_ID = 'numbers-0-10'; // which set a student starts on before any switching/assignment exists
 
 let currentStudentId = null;
 let wordIdByNumber = {};   // number -> vocab_words.id, for the current set
@@ -176,7 +176,7 @@ function saveCoins(total){
 }
 
 window.VocabBackend = {
-  CURRENT_SET_ID,
+  DEFAULT_SET_ID,
   ensureSignedIn,
   getStudentProfile,
   createStudentProfile,

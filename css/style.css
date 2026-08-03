@@ -91,6 +91,33 @@ html,body{
 .coin-value{ color:var(--marigold); font-size:1.05rem; }
 
 /* ---------- Level select ---------- */
+.set-select{
+  position:relative; z-index:2;
+  display:flex;
+  justify-content:center;
+  gap:10px;
+  padding:0 20px 10px;
+  flex-wrap:wrap;
+}
+.set-select[hidden]{ display:none; }
+.set-btn{
+  font-family:var(--font-display);
+  font-weight:700;
+  font-size:0.85rem;
+  color:var(--cream);
+  background:rgba(255,182,39,0.1);
+  border:2px solid rgba(255,182,39,0.4);
+  padding:8px 16px;
+  border-radius:999px;
+  cursor:pointer;
+}
+.set-btn:hover{ border-color:var(--marigold); }
+.set-btn.is-active{
+  background:var(--marigold);
+  border-color:var(--marigold);
+  color:var(--jungle-deep);
+}
+
 .level-select{
   position:relative; z-index:2;
   display:flex;

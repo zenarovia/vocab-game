@@ -44,7 +44,16 @@ const VOCAB_SET_2 = [
   { number: 20, word: 'veinte',     audio: 'assets/audio/veinte.mp3',     context: 'Diez más diez son ___.' },
 ];
 
-const VOCAB = VOCAB_SET_1;
+// ---- Set registry -------------------------------------------------------
+// Each set has its own id (matches the Supabase vocab_sets.id), a display
+// name, and its own word list — this is what lets a student (or, later,
+// a teacher assignment) pick which vocabulary they're working on.
+const VOCAB_SETS = {
+  'numbers-0-10':  { id: 'numbers-0-10',  name: 'Numbers 0-10',  words: VOCAB_SET_1 },
+  'numbers-11-20': { id: 'numbers-11-20', name: 'Numbers 11-20', words: VOCAB_SET_2 },
+};
+
+let VOCAB = VOCAB_SET_1;
 
 const PAIRS_PER_ROUND = 6;
 const MIN_TYPING_QUESTIONS = 10; // minimum before "Finish for now" unlocks
@@ -437,6 +446,8 @@ const pairsLeftEl = document.getElementById('pairsLeft');
 const streakLabelEl = document.getElementById('streakLabel');
 const toastEl = document.getElementById('toast');
 const levelSelectEl = document.getElementById('levelSelect');
+const setSelectEl = document.getElementById('setSelect');
+let activeSetId = VocabBackend.DEFAULT_SET_ID;
 const levelButtons = {
   matching: document.getElementById('levelBtnMatching'),
   typing: document.getElementById('levelBtnTyping'),
@@ -456,6 +467,50 @@ function updateLevelSelect(){
   });
 }
 
+// ---- Set switching -------------------------------------------------------
+// Renders one button per registered set; clicking a set that isn't the
+// active one swaps VOCAB, resets in-memory progress, and re-hydrates
+// from the backend for that set specifically (Supabase already scopes
+// word_progress/mode_practice_counts by set, so each set's progress is
+// genuinely independent — this was already true on the backend, this
+// just makes the frontend actually let you get to a second set).
+function renderSetSelect(){
+  setSelectEl.innerHTML = '';
+  Object.values(VOCAB_SETS).forEach(set => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'set-btn';
+    btn.textContent = set.name;
+    btn.classList.toggle('is-active', set.id === activeSetId);
+    btn.addEventListener('click', () => {
+      if(set.id !== activeSetId) switchToSet(set.id);
+    });
+    setSelectEl.appendChild(btn);
+  });
+}
+
+async function switchToSet(setId){
+  const set = VOCAB_SETS[setId];
+  if(!set) return;
+
+  activeSetId = setId;
+  VOCAB = set.words;
+
+  // Reset in-memory tracking — the backend holds the real per-set
+  // history, so this just clears the stale copy before re-hydrating.
+  wordStatsByMode = {};
+  totalTypingAnswered = 0;
+  totalListeningAnswered = 0;
+  totalDictationAnswered = 0;
+  totalContextAnswered = 0;
+  totalSpeedAnswered = 0;
+  totalBonusAnswered = 0;
+  recentContinuousWords.length = 0;
+
+  await hydrateFromBackend();
+  renderSetSelect();
+}
+
 Object.entries(levelButtons).forEach(([mode, btn]) => {
   btn.addEventListener('click', () => startRound(mode));
 });
@@ -464,8 +519,9 @@ function showScreen(name){
   Object.entries(screens).forEach(([k, el]) => el.hidden = (k !== name));
   state.screen = name;
   // Level bar is the way to choose/re-choose a level — visible except
-  // mid-round or during first-time setup.
+  // mid-round or during first-time setup. Set-select follows the same rule.
   levelSelectEl.hidden = (name === 'game' || name === 'setup');
+  setSelectEl.hidden = (name === 'game' || name === 'setup');
   if(name !== 'game' && name !== 'setup'){
     updateLevelSelect();
     stopSpeedTimer();
@@ -952,7 +1008,7 @@ function resolveBonusClick(isCorrect, attributedNumber, wrongFeedbackText){
 
   state.typingQuestionCount++;
   totalBonusAnswered++;
-  VocabBackend.saveModeCount(VocabBackend.CURRENT_SET_ID, 'bonus', totalBonusAnswered);
+  VocabBackend.saveModeCount(activeSetId, 'bonus', totalBonusAnswered);
   updateProgress();
 
   btnTfYes.disabled = true;
@@ -1257,12 +1313,12 @@ function resolveTypingAnswer(rawGiven){
   }
 
   state.typingQuestionCount++;
-  if(state.mode === 'typing'){ totalTypingAnswered++; VocabBackend.saveModeCount(VocabBackend.CURRENT_SET_ID, 'typing', totalTypingAnswered); }
-  if(state.mode === 'listening'){ totalListeningAnswered++; VocabBackend.saveModeCount(VocabBackend.CURRENT_SET_ID, 'listening', totalListeningAnswered); }
-  if(state.mode === 'dictation'){ totalDictationAnswered++; VocabBackend.saveModeCount(VocabBackend.CURRENT_SET_ID, 'dictation', totalDictationAnswered); }
-  if(state.mode === 'context'){ totalContextAnswered++; VocabBackend.saveModeCount(VocabBackend.CURRENT_SET_ID, 'context', totalContextAnswered); }
-  if(state.mode === 'speed'){ totalSpeedAnswered++; VocabBackend.saveModeCount(VocabBackend.CURRENT_SET_ID, 'speed', totalSpeedAnswered); }
-  if(state.mode === 'bonus'){ totalBonusAnswered++; VocabBackend.saveModeCount(VocabBackend.CURRENT_SET_ID, 'bonus', totalBonusAnswered); }
+  if(state.mode === 'typing'){ totalTypingAnswered++; VocabBackend.saveModeCount(activeSetId, 'typing', totalTypingAnswered); }
+  if(state.mode === 'listening'){ totalListeningAnswered++; VocabBackend.saveModeCount(activeSetId, 'listening', totalListeningAnswered); }
+  if(state.mode === 'dictation'){ totalDictationAnswered++; VocabBackend.saveModeCount(activeSetId, 'dictation', totalDictationAnswered); }
+  if(state.mode === 'context'){ totalContextAnswered++; VocabBackend.saveModeCount(activeSetId, 'context', totalContextAnswered); }
+  if(state.mode === 'speed'){ totalSpeedAnswered++; VocabBackend.saveModeCount(activeSetId, 'speed', totalSpeedAnswered); }
+  if(state.mode === 'bonus'){ totalBonusAnswered++; VocabBackend.saveModeCount(activeSetId, 'bonus', totalBonusAnswered); }
   updateProgress();
   typingInput.disabled = true;
 
@@ -1291,6 +1347,7 @@ async function initApp(){
   }
 
   await hydrateFromBackend();
+  renderSetSelect();
   showScreen('start');
 }
 
@@ -1318,7 +1375,7 @@ function promptForStudentSetup(){
 }
 
 async function hydrateFromBackend(){
-  const progress = await VocabBackend.loadStudentProgress(VocabBackend.CURRENT_SET_ID);
+  const progress = await VocabBackend.loadStudentProgress(activeSetId);
 
   wordStatsByMode = progress.wordStatsByMode || {};
   coins = progress.coins || 0;
