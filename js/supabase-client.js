@@ -90,6 +90,31 @@ async function loadWordIdsForSet(setId){
   return map;
 }
 
+// Checks whether EVERY word in a set has been graduated in Matching
+// (correct > wrong) — used to gate whether the next set unlocks. Doesn't
+// require switching the active set; queries that set's own data directly.
+async function isSetFullyGraduated(setId){
+  if(!currentStudentId) return false;
+  const idMap = await loadWordIdsForSet(setId);
+  const wordIds = Object.values(idMap);
+  if(wordIds.length === 0) return false;
+
+  const { data, error } = await sb
+    .from('word_progress')
+    .select('word_id, correct_count, wrong_count')
+    .eq('student_id', currentStudentId)
+    .eq('mode', 'matching')
+    .in('word_id', wordIds);
+  if(error){
+    console.error('Failed to check set completion:', error);
+    return false;
+  }
+  const graduatedIds = new Set(
+    (data || []).filter(row => row.correct_count > row.wrong_count).map(row => row.word_id)
+  );
+  return wordIds.every(id => graduatedIds.has(id));
+}
+
 async function loadStudentProgress(setId){
   if(!currentStudentId) return { wordStatsByMode: {}, modeCounts: {}, coins: 0 };
 
@@ -184,4 +209,5 @@ window.VocabBackend = {
   saveWordProgress,
   saveModeCount,
   saveCoins,
+  isSetFullyGraduated,
 };

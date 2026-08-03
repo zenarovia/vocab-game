@@ -46,11 +46,12 @@ const VOCAB_SET_2 = [
 
 // ---- Set registry -------------------------------------------------------
 // Each set has its own id (matches the Supabase vocab_sets.id), a display
-// name, and its own word list — this is what lets a student (or, later,
-// a teacher assignment) pick which vocabulary they're working on.
+// name, and its own word list. Sets are sequential, same as levels — a
+// set only unlocks once the one before it has been fully graduated in
+// Matching. previousSetId is null for the first set (always unlocked).
 const VOCAB_SETS = {
-  'numbers-0-10':  { id: 'numbers-0-10',  name: 'Numbers 0-10',  words: VOCAB_SET_1 },
-  'numbers-11-20': { id: 'numbers-11-20', name: 'Numbers 11-20', words: VOCAB_SET_2 },
+  'numbers-0-10':  { id: 'numbers-0-10',  name: 'Numbers 0-10',  words: VOCAB_SET_1, order: 0, previousSetId: null },
+  'numbers-11-20': { id: 'numbers-11-20', name: 'Numbers 11-20', words: VOCAB_SET_2, order: 1, previousSetId: 'numbers-0-10' },
 };
 
 let VOCAB = VOCAB_SET_1;
@@ -471,25 +472,38 @@ function updateLevelSelect(){
 }
 
 // ---- Set switching -------------------------------------------------------
-// Renders one button per registered set; clicking a set that isn't the
-// active one swaps VOCAB, resets in-memory progress, and re-hydrates
-// from the backend for that set specifically (Supabase already scopes
-// word_progress/mode_practice_counts by set, so each set's progress is
-// genuinely independent — this was already true on the backend, this
-// just makes the frontend actually let you get to a second set).
-function renderSetSelect(){
+// Sets are sequential, same as levels: a set only unlocks once the one
+// before it has been fully graduated in Matching. Renders one option per
+// registered set in the dropdown; clicking an unlocked, non-active set
+// swaps VOCAB, resets in-memory progress, and re-hydrates from the
+// backend for that set specifically.
+async function isSetUnlocked(setId){
+  const set = VOCAB_SETS[setId];
+  if(!set || !set.previousSetId) return true; // first set is always open
+  return VocabBackend.isSetFullyGraduated(set.previousSetId);
+}
+
+async function renderSetSelect(){
   const activeSet = VOCAB_SETS[activeSetId];
   setCurrentName.textContent = activeSet ? activeSet.name : activeSetId;
 
+  const orderedSets = Object.values(VOCAB_SETS).sort((a, b) => a.order - b.order);
+  const unlockResults = await Promise.all(orderedSets.map(set => isSetUnlocked(set.id)));
+
   setDropdown.innerHTML = '';
-  Object.values(VOCAB_SETS).forEach(set => {
+  orderedSets.forEach((set, i) => {
+    const unlocked = unlockResults[i];
     const opt = document.createElement('button');
     opt.type = 'button';
     opt.className = 'set-option';
-    opt.textContent = set.name;
     opt.setAttribute('role', 'option');
+    opt.disabled = !unlocked;
     opt.classList.toggle('is-active', set.id === activeSetId);
+    opt.innerHTML = unlocked
+      ? set.name
+      : `${set.name} <span class="set-option-lock" aria-hidden="true">🔒</span>`;
     opt.addEventListener('click', () => {
+      if(!unlocked) return;
       closeSetDropdown();
       if(set.id !== activeSetId) switchToSet(set.id);
     });
@@ -533,7 +547,7 @@ async function switchToSet(setId){
   recentContinuousWords.length = 0;
 
   await hydrateFromBackend();
-  renderSetSelect();
+  await renderSetSelect();
 }
 
 Object.entries(levelButtons).forEach(([mode, btn]) => {
@@ -549,6 +563,7 @@ function showScreen(name){
   setSelectEl.hidden = (name === 'game' || name === 'setup');
   if(name !== 'game' && name !== 'setup'){
     updateLevelSelect();
+    renderSetSelect();
     stopSpeedTimer();
   }
   if(name !== 'game' && 'speechSynthesis' in window){
@@ -1372,7 +1387,7 @@ async function initApp(){
   }
 
   await hydrateFromBackend();
-  renderSetSelect();
+  await renderSetSelect();
   showScreen('start');
 }
 

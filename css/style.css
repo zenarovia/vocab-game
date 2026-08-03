@@ -163,6 +163,12 @@ html,body{
 }
 .set-option:hover{ background:rgba(255,182,39,0.15); }
 .set-option.is-active{ color:var(--marigold); }
+.set-option:disabled{
+  opacity:0.4;
+  cursor:not-allowed;
+}
+.set-option:disabled:hover{ background:transparent; }
+.set-option-lock{ font-size:0.78rem; margin-left:4px; }
 
 .level-select{
   position:relative; z-index:2;
