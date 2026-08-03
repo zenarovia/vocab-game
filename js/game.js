@@ -352,6 +352,13 @@ function earnCoins(amount){
   VocabBackend.saveCoins(coins);
 }
 
+// Logs one answer event for the class competition leaderboard — every
+// attempt counts toward participation; points only get logged on a
+// correct, mastery-counting answer (review-halved points included).
+function logCompetitionActivity(isCorrect, points){
+  VocabBackend.logActivity(activeSetId, state.mode, isCorrect, isCorrect ? (points || 0) : 0);
+}
+
 // ---- Listening modality: audio playback -----------------------------------
 // Prefers a real generated audio file (uniform quality, works the same on
 // every device) — falls back to the browser's built-in speech synthesis
@@ -420,6 +427,7 @@ const screens = {
   game: document.getElementById('screen-game'),
   complete: document.getElementById('screen-complete'),
   setup: document.getElementById('screen-setup'),
+  leaderboard: document.getElementById('screen-leaderboard'),
 };
 const board = document.getElementById('board');
 const typingPanel = document.getElementById('typingPanel');
@@ -591,13 +599,52 @@ Object.entries(levelButtons).forEach(([mode, btn]) => {
   btn.addEventListener('click', () => startRound(mode));
 });
 
+// ---- Class competition leaderboard ---------------------------------------
+const btnLeaderboard = document.getElementById('btnLeaderboard');
+const btnCloseLeaderboard = document.getElementById('btnCloseLeaderboard');
+const leaderboardList = document.getElementById('leaderboardList');
+
+btnLeaderboard.addEventListener('click', async () => {
+  showScreen('leaderboard');
+  await renderLeaderboard();
+});
+btnCloseLeaderboard.addEventListener('click', () => showScreen('start'));
+
+async function renderLeaderboard(){
+  leaderboardList.innerHTML = '<p class="leaderboard-empty">Loading...</p>';
+  const standings = await VocabBackend.getClassLeaderboard();
+
+  if(standings.length === 0){
+    leaderboardList.innerHTML = '<p class="leaderboard-empty">No class activity yet this week.</p>';
+    return;
+  }
+
+  leaderboardList.innerHTML = '';
+  standings.forEach((row, i) => {
+    const el = document.createElement('div');
+    el.className = 'leaderboard-row' + (i === 0 ? ' is-first' : '');
+    el.innerHTML = `
+      <span class="leaderboard-rank">#${i + 1}</span>
+      <span class="leaderboard-info">
+        <span class="leaderboard-class">${row.class_period}</span><br>
+        <span class="leaderboard-detail">${Math.round(row.avg_participation_this_week)} avg questions &middot; ${Math.round(row.avg_mastery_this_week)} avg mastery pts</span>
+      </span>
+      <span class="leaderboard-score">${Math.round(row.combined_score)}</span>
+    `;
+    leaderboardList.appendChild(el);
+  });
+}
+
 function showScreen(name){
   Object.entries(screens).forEach(([k, el]) => el.hidden = (k !== name));
   state.screen = name;
   // Level bar is the way to choose/re-choose a level — visible except
-  // mid-round or during first-time setup. Set-select follows the same rule.
-  levelSelectEl.hidden = (name === 'game' || name === 'setup');
-  setSelectEl.hidden = (name === 'game' || name === 'setup');
+  // mid-round, first-time setup, or the leaderboard. Set-select follows
+  // the same rule.
+  const hideBars = (name === 'game' || name === 'setup' || name === 'leaderboard');
+  levelSelectEl.hidden = hideBars;
+  setSelectEl.hidden = hideBars;
+  btnLeaderboard.hidden = (name === 'game' || name === 'setup' || name === 'leaderboard');
   if(name !== 'game' && name !== 'setup'){
     updateLevelSelect();
     updateReviewStatus();
@@ -740,10 +787,12 @@ function resolveMatch(a, b){
   // Tab-switch guard: correct answer still resolves visually and counts
   // as participation, but does not register as mastery progress.
   const countsForMastery = !tabSwitchedDuringRound;
+  const matchPoints = countsForMastery ? applyReviewMultiplier(MODALITY_WEIGHT.matching) : 0;
   if(countsForMastery){
-    s.correct += applyReviewMultiplier(MODALITY_WEIGHT.matching);
+    s.correct += matchPoints;
     markWordStatsChanged('matching', number);
   }
+  logCompetitionActivity(true, matchPoints);
   state.correctAttempts++;
   state.streak++;
 
@@ -774,6 +823,7 @@ function resolveMatch(a, b){
 function resolveWrong(a, b){
   state.lock = true;
   state.streak = 0;
+  logCompetitionActivity(false, 0);
 
   a.classList.add('is-wrong');
   b.classList.add('is-wrong');
@@ -1032,11 +1082,13 @@ function resolveSequenceRoundComplete(){
     state.streak++;
     const bonus = applyReviewMultiplier((state.streak >= 3 ? 2 : 1) * SEQUENCE_WEIGHT);
     earnCoins(bonus);
+    logCompetitionActivity(true, bonus);
     typingFeedback.textContent = state.streak >= 3 ? `¡Racha! +${bonus}` : `¡Correcto! +${bonus}`;
     typingFeedback.className = 'typing-feedback correct';
   } else {
     state.wrongAttempts++;
     state.streak = 0;
+    logCompetitionActivity(false, 0);
     typingFeedback.textContent = '¡Buen intento! Sigue practicando.';
     typingFeedback.className = 'typing-feedback wrong';
   }
@@ -1075,11 +1127,13 @@ function resolveBonusClick(isCorrect, attributedNumber, wrongFeedbackText){
     state.streak++;
     const bonus = applyReviewMultiplier((state.streak >= 3 ? 2 : 1) * BONUS_WEIGHT);
     earnCoins(bonus);
+    logCompetitionActivity(true, bonus);
     typingFeedback.textContent = state.streak >= 3 ? `¡Racha! +${bonus}` : `¡Correcto! +${bonus}`;
     typingFeedback.className = 'typing-feedback correct';
   } else {
     state.wrongAttempts++;
     state.streak = 0;
+    logCompetitionActivity(false, 0);
     typingFeedback.textContent = wrongFeedbackText || 'Inténtalo la próxima vez.';
     typingFeedback.className = 'typing-feedback wrong';
   }
@@ -1376,11 +1430,13 @@ function resolveTypingAnswer(rawGiven){
     state.streak++;
     const bonus = applyReviewMultiplier((state.streak >= 3 ? 2 : 1) * weight);
     earnCoins(bonus);
+    logCompetitionActivity(true, bonus);
     typingFeedback.textContent = state.streak >= 3 ? `¡Racha! +${bonus}` : `¡Correcto! +${bonus}`;
     typingFeedback.classList.add('correct');
   } else {
     s.wrong++;
     markWordStatsChanged(state.mode, v.number);
+    logCompetitionActivity(false, 0);
     state.wrongAttempts++;
     state.streak = 0;
     typingInput.classList.add('is-wrong');

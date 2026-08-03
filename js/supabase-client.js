@@ -219,6 +219,34 @@ function saveCoins(total){
   }).then(({ error }) => { if(error) console.error('Failed to save coins:', error); });
 }
 
+// Logs one answer event with a real timestamp — this is what lets the
+// class competition leaderboard compute "this week" / "today" purely as
+// a date filter, with no manual weekly reset needed.
+function logActivity(setId, mode, isCorrect, points){
+  if(!currentStudentId) return;
+  sb.from('activity_log').insert({
+    student_id: currentStudentId,
+    set_id: setId,
+    mode: mode,
+    is_correct: isCorrect,
+    points: points || 0,
+  }).then(({ error }) => { if(error) console.error('Failed to log activity:', error); });
+}
+
+// Fetches the current class standings (this week), highest combined
+// score first — reads directly from the class_weekly_leaderboard view.
+async function getClassLeaderboard(){
+  const { data, error } = await sb
+    .from('class_weekly_leaderboard')
+    .select('class_period, student_count, avg_participation_this_week, avg_mastery_this_week, combined_score')
+    .order('combined_score', { ascending: false });
+  if(error){
+    console.error('Failed to load class leaderboard:', error);
+    return [];
+  }
+  return data || [];
+}
+
 window.VocabBackend = {
   DEFAULT_SET_ID,
   ensureSignedIn,
@@ -230,4 +258,6 @@ window.VocabBackend = {
   saveCoins,
   isSetFullyGraduated,
   getAssignedSetForClassPeriod,
+  logActivity,
+  getClassLeaderboard,
 };

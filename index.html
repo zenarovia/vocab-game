@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=36">
+<link rel="stylesheet" href="css/style.css?v=37">
 </head>
 <body>
 
@@ -15,7 +15,7 @@
 
   <!-- Ambient background pattern -->
   <div class="bg-pattern" aria-hidden="true"></div>
-  <div class="build-tag" aria-hidden="true">build 36</div>
+  <div class="build-tag" aria-hidden="true">build 37</div>
 
   <!-- Top bar: coin counter + mascot egg -->
   <header class="topbar">
@@ -23,6 +23,7 @@
       <span class="brand-mark">🥚</span>
       <span class="brand-name">Número Nest</span>
     </div>
+    <button class="btn-leaderboard" id="btnLeaderboard" type="button" aria-label="Class leaderboard">🏆</button>
     <div class="coin-counter" id="coinCounter">
       <span class="coin-icon">●</span>
       <span class="coin-value" id="coinValue">0</span>
@@ -218,10 +219,20 @@
     </div>
   </section>
 
+  <!-- LEADERBOARD: class competition standings, this week -->
+  <section class="screen" id="screen-leaderboard" hidden>
+    <div class="start-card">
+      <h1 class="title">🏆 Class Leaderboard</h1>
+      <p class="subtitle">This week &middot; participation + mastery, 60/40</p>
+      <div class="leaderboard-list" id="leaderboardList"></div>
+      <button class="btn-primary" id="btnCloseLeaderboard" type="button" style="margin-top: 20px;">Back</button>
+    </div>
+  </section>
+
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase-client.js"></script>
-<script src="js/game.js?v=36"></script>
+<script src="js/game.js?v=37"></script>
 </body>
 </html>
