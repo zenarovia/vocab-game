@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=21">
+<link rel="stylesheet" href="css/style.css?v=23">
 </head>
 <body>
 
@@ -15,7 +15,7 @@
 
   <!-- Ambient background pattern -->
   <div class="bg-pattern" aria-hidden="true"></div>
-  <div class="build-tag" aria-hidden="true">build 21</div>
+  <div class="build-tag" aria-hidden="true">build 23</div>
 
   <!-- Top bar: coin counter + mascot egg -->
   <header class="topbar">
@@ -58,6 +58,11 @@
       <span class="level-name">Context</span>
       <span class="level-lock" aria-hidden="true">🔒</span>
     </button>
+    <button class="level-btn" id="levelBtnSpeed" data-mode="speed" type="button" disabled>
+      <span class="level-icon">⚡</span>
+      <span class="level-name">Speed</span>
+      <span class="level-lock" aria-hidden="true">🔒</span>
+    </button>
   </div>
 
   <!-- START SCREEN -->
@@ -89,6 +94,9 @@
 
     <div class="typing-panel" id="typingPanel" hidden>
       <p class="typing-instruction" id="typingInstruction">Type the word for:</p>
+      <div class="speed-timer-track" id="speedTimerTrack" hidden aria-hidden="true">
+        <div class="speed-timer-fill" id="speedTimerFill"></div>
+      </div>
       <div class="typing-prompt-frame">
         <div class="typing-prompt" id="typingPrompt"></div>
         <img class="context-image" id="contextImage" alt="" hidden />
@@ -146,8 +154,40 @@
     </div>
   </section>
 
+  <!-- STUDENT SETUP: shown once, before a new student's first level pick -->
+  <section class="screen" id="screen-setup" hidden>
+    <div class="start-card">
+      <div class="egg-wobble">🥚</div>
+      <h1 class="title">¡Bienvenido!</h1>
+      <p class="subtitle">What's your name? This is just so your progress is saved for next time.</p>
+      <form id="setupForm" autocomplete="off">
+        <input
+          type="text"
+          id="setupNameInput"
+          class="typing-input"
+          placeholder="Tu nombre"
+          autocomplete="off"
+          autocapitalize="words"
+          required
+        />
+        <input
+          type="text"
+          id="setupPeriodInput"
+          class="typing-input"
+          placeholder="Class period (optional)"
+          autocomplete="off"
+          style="margin-top: 12px;"
+        />
+        <button class="btn-primary" type="submit" style="margin-top: 18px;">Empezar</button>
+      </form>
+      <p class="typing-feedback wrong" id="setupError"></p>
+    </div>
+  </section>
+
 </div>
 
-<script src="js/game.js?v=15"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/game.js?v=23"></script>
 </body>
 </html>

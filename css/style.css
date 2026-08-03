@@ -479,6 +479,28 @@ html,body{
 }
 .finish-hint[hidden]{ display:none; }
 
+/* ---------- Speed challenge timer ---------- */
+.speed-timer-track{
+  width:100%;
+  max-width:360px;
+  height:10px;
+  background:rgba(255,255,255,0.08);
+  border-radius:999px;
+  overflow:hidden;
+  margin-bottom:16px;
+}
+.speed-timer-track[hidden]{ display:none; }
+.speed-timer-fill{
+  height:100%;
+  width:100%;
+  background:linear-gradient(90deg, var(--turquoise), var(--marigold));
+  border-radius:999px;
+  transition:width 100ms linear, background 200ms ease;
+}
+.speed-timer-fill.is-urgent{
+  background:var(--coral);
+}
+
 /* ---------- Toast ---------- */
 .toast{
   position:fixed; left:50%; bottom:28px;

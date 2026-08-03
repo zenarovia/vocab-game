@@ -46,18 +46,24 @@ const MODALITY_WEIGHT = {
 // than the number. Worth more than regular listening, reflecting that.
 const DICTATION_WEIGHT = 4;
 const CONTEXT_WEIGHT = 5; // fill-in-context — continues the increasing scale
+const SPEED_WEIGHT = 6;   // speed challenge — the hardest, final level
+const SPEED_TIME_LIMIT_MS = 6000; // seconds to answer before it's marked wrong
 
 // English number words 0-10 — accepted as equivalent to the digit when the
 // expected answer is a number (e.g. typing "one" counts the same as "1").
 const ENGLISH_NUMBER_WORDS = ['zero','one','two','three','four','five','six','seven','eight','nine','ten'];
 
-// ---- Per-word performance memory (adaptive-lite) ----------------------
-// Real system: persisted per student across sessions. Here: in-memory
-// per browser session only, as a stand-in for that future data store.
-const wordStats = {}; // number -> { wrong: 0, correct: 0 }
+// ---- Per-word performance memory -------------------------------------
+// Persisted per student via Supabase — hydrated on load in initApp(),
+// and every change is saved through markWordStatsChanged() below.
+let wordStats = {}; // number -> { wrong: 0, correct: 0 }
 function statsFor(n){
   if(!wordStats[n]) wordStats[n] = { wrong: 0, correct: 0 };
   return wordStats[n];
+}
+function markWordStatsChanged(number){
+  const s = statsFor(number);
+  VocabBackend.saveWordProgress(number, s.correct, s.wrong);
 }
 
 // Weighted pick: words with more wrong attempts are more likely to
@@ -116,13 +122,14 @@ function pickNextContinuousWord(pool){
 // ---- Level unlocking + pool selection (manual level-select) -----------
 // Students now pick which level to play from the always-visible level bar,
 // rather than the system deciding automatically. Strictly sequential:
-// Matching → Typing → Listening → Dictation. Each level requires the
-// previous one to be both unlocked AND genuinely practiced (not just
-// unlocked a second ago) before the next one opens up.
+// Matching → Typing → Listening → Dictation → Context → Speed. Each level
+// requires the previous one to be both unlocked AND genuinely practiced
+// (not just unlocked a second ago) before the next one opens up.
 const GRADUATION_THRESHOLD_COUNT = 3; // words needed before Typing unlocks
 let totalTypingAnswered = 0;    // practice done in Typing — gates Listening
 let totalListeningAnswered = 0; // practice done in Listening — gates Dictation
 let totalDictationAnswered = 0; // practice done in Dictation — gates Fill-in-context
+let totalContextAnswered = 0;   // practice done in Context — gates Speed
 
 function masteryScore(number){
   const s = statsFor(number);
@@ -137,6 +144,7 @@ function isModeUnlocked(mode){
   if(mode === 'listening') return isModeUnlocked('typing') && totalTypingAnswered >= MIN_TYPING_QUESTIONS;
   if(mode === 'dictation') return isModeUnlocked('listening') && totalListeningAnswered >= MIN_TYPING_QUESTIONS;
   if(mode === 'context') return isModeUnlocked('dictation') && totalDictationAnswered >= MIN_TYPING_QUESTIONS;
+  if(mode === 'speed') return isModeUnlocked('context') && totalContextAnswered >= MIN_TYPING_QUESTIONS;
   return false;
 }
 function poolForMode(mode){
@@ -296,6 +304,7 @@ function earnCoins(amount){
   coinValueEl.textContent = coins;
   coinCounterEl.classList.add('bump');
   setTimeout(()=>coinCounterEl.classList.remove('bump'), 180);
+  VocabBackend.saveCoins(coins);
 }
 
 // ---- Listening modality: audio playback -----------------------------------
@@ -360,11 +369,14 @@ const screens = {
   start: document.getElementById('screen-start'),
   game: document.getElementById('screen-game'),
   complete: document.getElementById('screen-complete'),
+  setup: document.getElementById('screen-setup'),
 };
 const board = document.getElementById('board');
 const typingPanel = document.getElementById('typingPanel');
 const typingPrompt = document.getElementById('typingPrompt');
 const contextImage = document.getElementById('contextImage');
+const speedTimerTrack = document.getElementById('speedTimerTrack');
+const speedTimerFill = document.getElementById('speedTimerFill');
 const typingInstruction = document.getElementById('typingInstruction');
 const typingForm = document.getElementById('typingForm');
 const typingInput = document.getElementById('typingInput');
@@ -386,6 +398,7 @@ const levelButtons = {
   listening: document.getElementById('levelBtnListening'),
   dictation: document.getElementById('levelBtnDictation'),
   context: document.getElementById('levelBtnContext'),
+  speed: document.getElementById('levelBtnSpeed'),
 };
 
 function updateLevelSelect(){
@@ -404,10 +417,11 @@ function showScreen(name){
   Object.entries(screens).forEach(([k, el]) => el.hidden = (k !== name));
   state.screen = name;
   // Level bar is the way to choose/re-choose a level — visible except
-  // mid-round, where it would be confusing to let it interrupt play.
-  levelSelectEl.hidden = (name === 'game');
-  if(name !== 'game'){
+  // mid-round or during first-time setup.
+  levelSelectEl.hidden = (name === 'game' || name === 'setup');
+  if(name !== 'game' && name !== 'setup'){
     updateLevelSelect();
+    stopSpeedTimer();
   }
   if(name !== 'game' && 'speechSynthesis' in window){
     window.speechSynthesis.cancel();
@@ -431,7 +445,7 @@ function startRound(mode){
   state.roundCoinsEarned = 0;
   tabSwitchedDuringRound = false;
 
-  if(mode === 'typing' || mode === 'listening' || mode === 'dictation' || mode === 'context'){
+  if(mode === 'typing' || mode === 'listening' || mode === 'dictation' || mode === 'context' || mode === 'speed'){
     startTypingRound(pool);
   } else {
     startMatchingRound(pool);
@@ -547,6 +561,7 @@ function resolveMatch(a, b){
   const countsForMastery = !tabSwitchedDuringRound;
   if(countsForMastery){
     s.correct += MODALITY_WEIGHT.matching;
+    markWordStatsChanged(number);
   }
   state.correctAttempts++;
   state.streak++;
@@ -591,7 +606,7 @@ function resolveWrong(a, b){
 }
 
 function updateProgress(){
-  if(state.mode === 'typing' || state.mode === 'listening' || state.mode === 'dictation' || state.mode === 'context'){
+  if(state.mode === 'typing' || state.mode === 'listening' || state.mode === 'dictation' || state.mode === 'context' || state.mode === 'speed'){
     pairsLeftEl.textContent = state.typingQuestionCount === 1
       ? '1 question so far'
       : `${state.typingQuestionCount} questions so far`;
@@ -618,7 +633,7 @@ function finishRound(){
   const matchingStat = document.getElementById('matchingCompleteStat');
   const typingStat = document.getElementById('typingAccuracyStat');
 
-  if(state.mode === 'typing' || state.mode === 'listening' || state.mode === 'dictation' || state.mode === 'context'){
+  if(state.mode === 'typing' || state.mode === 'listening' || state.mode === 'dictation' || state.mode === 'context' || state.mode === 'speed'){
     const total = state.correctAttempts + state.wrongAttempts;
     const accuracy = total > 0 ? Math.round((state.correctAttempts/total)*100) : 100;
     document.getElementById('finalAccuracy').textContent = accuracy;
@@ -659,7 +674,7 @@ function finishRound(){
 // real practice. Both modes keep presenting words (repeating/cycling,
 // still weighted toward struggling ones) until the student taps Finish.
 function startTypingRound(pool){
-  const modeLabels = { typing: 'Typing', listening: 'Listening', dictation: 'Dictation', context: 'Fill-in-Context' };
+  const modeLabels = { typing: 'Typing', listening: 'Listening', dictation: 'Dictation', context: 'Fill-in-Context', speed: 'Speed Challenge' };
   modeLabelEl.textContent = modeLabels[state.mode];
   board.hidden = true;
   typingPanel.hidden = false;
@@ -672,6 +687,34 @@ function startTypingRound(pool){
   showScreen('game');
   updateProgress();
   renderTypingWord();
+}
+
+// ---- Speed challenge timer -------------------------------------------
+// A visible countdown bar; if it runs out before the student answers,
+// the question resolves as a timed-out (wrong) answer automatically —
+// speed itself is the skill being tested here.
+let speedTimeoutId = null;
+let speedUrgentId = null;
+
+function startSpeedTimer(){
+  stopSpeedTimer();
+  speedTimerFill.classList.remove('is-urgent');
+  speedTimerFill.style.transition = 'none';
+  speedTimerFill.style.width = '100%';
+  void speedTimerFill.offsetWidth; // force reflow so the transition below applies
+  speedTimerFill.style.transition = `width ${SPEED_TIME_LIMIT_MS}ms linear, background 200ms ease`;
+  requestAnimationFrame(() => {
+    speedTimerFill.style.width = '0%';
+  });
+  speedUrgentId = setTimeout(() => speedTimerFill.classList.add('is-urgent'), SPEED_TIME_LIMIT_MS * 0.6);
+  speedTimeoutId = setTimeout(() => {
+    resolveTypingAnswer(''); // time's up — resolves as incorrect, same as any empty answer
+  }, SPEED_TIME_LIMIT_MS);
+}
+
+function stopSpeedTimer(){
+  clearTimeout(speedTimeoutId);
+  clearTimeout(speedUrgentId);
 }
 
 function renderTypingWord(){
@@ -699,6 +742,8 @@ function renderTypingWord(){
     listeningControls.hidden = false;
     contextImage.hidden = true;
     contextImage.removeAttribute('src');
+    speedTimerTrack.hidden = true;
+    stopSpeedTimer();
     playCurrentListeningWord();
   } else if(state.mode === 'context'){
     // Fill-in-context: a full sentence with a blank, testing the word in
@@ -708,6 +753,8 @@ function renderTypingWord(){
     typingInstruction.textContent = 'Completa la oración:';
     typingPanel.classList.remove('is-dictation');
     listeningControls.hidden = true;
+    speedTimerTrack.hidden = true;
+    stopSpeedTimer();
     typingPrompt.hidden = false;
     typingPrompt.classList.add('is-sentence');
     typingPrompt.innerHTML = '';
@@ -732,7 +779,8 @@ function renderTypingWord(){
     contextImage.hidden = true;
     contextImage.removeAttribute('src');
     // Randomize direction per word: sometimes show the digit and ask for
-    // the word, sometimes show the word and ask for the digit.
+    // the word, sometimes show the word and ask for the digit. Speed
+    // challenge uses this same format, just with a countdown added.
     state.typingPromptKind = Math.random() < 0.5 ? 'number' : 'word';
     const promptText = state.typingPromptKind === 'number' ? String(v.number) : v.word;
     typingInstruction.textContent = state.typingPromptKind === 'number'
@@ -753,6 +801,14 @@ function renderTypingWord(){
       const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
       fitWordCanvas(canvas, promptText, rect.width - padX, rect.height - padY);
     });
+
+    if(state.mode === 'speed'){
+      speedTimerTrack.hidden = false;
+      startSpeedTimer();
+    } else {
+      speedTimerTrack.hidden = true;
+      stopSpeedTimer();
+    }
   }
 
   typingInput.focus();
@@ -794,17 +850,18 @@ accentRow.addEventListener('click', (e) => {
   typingInput.setSelectionRange(newPos, newPos);
 });
 
-typingForm.addEventListener('submit', (e) => {
-  e.preventDefault();
+function resolveTypingAnswer(rawGiven){
   if(typingInput.disabled) return; // already resolving previous answer
+  stopSpeedTimer();
 
   const v = state.currentTypingWord;
   const isDictation = state.mode === 'dictation';
   const isContext = state.mode === 'context';
+  const isSpeed = state.mode === 'speed';
   const expected = (isDictation || isContext)
     ? v.word
     : (state.typingPromptKind === 'number' ? v.word : String(v.number));
-  const given = normalizeAnswer(typingInput.value);
+  const given = normalizeAnswer(rawGiven);
 
   // When the expected answer is a number, also accept its English word
   // (e.g. "one" counts the same as "1"). Dictation and fill-in-context
@@ -813,13 +870,19 @@ typingForm.addEventListener('submit', (e) => {
   if(!isDictation && !isContext && state.typingPromptKind !== 'number'){
     acceptableAnswers.push(normalizeAnswer(ENGLISH_NUMBER_WORDS[v.number]));
   }
-  const isCorrect = acceptableAnswers.includes(given);
+  const isCorrect = given.length > 0 && acceptableAnswers.includes(given);
   const s = statsFor(v.number);
-  const weight = isContext ? CONTEXT_WEIGHT : (isDictation ? DICTATION_WEIGHT : MODALITY_WEIGHT[state.mode]);
+  const weight = isContext ? CONTEXT_WEIGHT
+    : isDictation ? DICTATION_WEIGHT
+    : isSpeed ? SPEED_WEIGHT
+    : MODALITY_WEIGHT[state.mode];
 
   if(isCorrect){
     const countsForMastery = !tabSwitchedDuringRound;
-    if(countsForMastery) s.correct += weight;
+    if(countsForMastery){
+      s.correct += weight;
+      markWordStatsChanged(v.number);
+    }
     state.correctAttempts++;
     state.streak++;
     const bonus = (state.streak >= 3 ? 2 : 1) * weight;
@@ -828,26 +891,89 @@ typingForm.addEventListener('submit', (e) => {
     typingFeedback.classList.add('correct');
   } else {
     s.wrong++;
+    markWordStatsChanged(v.number);
     state.wrongAttempts++;
     state.streak = 0;
     typingInput.classList.add('is-wrong');
-    typingFeedback.textContent = `La respuesta era: ${expected}`;
+    typingFeedback.textContent = given.length === 0
+      ? `¡Se acabó el tiempo! Era: ${expected}`
+      : `La respuesta era: ${expected}`;
     typingFeedback.classList.add('wrong');
   }
 
   state.typingQuestionCount++;
-  if(state.mode === 'typing') totalTypingAnswered++;
-  if(state.mode === 'listening') totalListeningAnswered++;
-  if(state.mode === 'dictation') totalDictationAnswered++;
+  if(state.mode === 'typing'){ totalTypingAnswered++; VocabBackend.saveModeCount(VocabBackend.CURRENT_SET_ID, 'typing', totalTypingAnswered); }
+  if(state.mode === 'listening'){ totalListeningAnswered++; VocabBackend.saveModeCount(VocabBackend.CURRENT_SET_ID, 'listening', totalListeningAnswered); }
+  if(state.mode === 'dictation'){ totalDictationAnswered++; VocabBackend.saveModeCount(VocabBackend.CURRENT_SET_ID, 'dictation', totalDictationAnswered); }
+  if(state.mode === 'context'){ totalContextAnswered++; VocabBackend.saveModeCount(VocabBackend.CURRENT_SET_ID, 'context', totalContextAnswered); }
   updateProgress();
   typingInput.disabled = true;
 
   setTimeout(() => {
     renderTypingWord();
   }, isCorrect ? 550 : 1100);
+}
+
+typingForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  resolveTypingAnswer(typingInput.value);
 });
 
 btnFinishTyping.addEventListener('click', () => finishRound());
 
 // ---- Initial state on page load ------------------------------------------
-updateLevelSelect();
+// Sign in (anonymous, persistent per device), get or create the student's
+// profile, then hydrate all local state from what's actually saved —
+// this is what makes progress survive a refresh instead of resetting.
+async function initApp(){
+  await VocabBackend.ensureSignedIn();
+  let profile = await VocabBackend.getStudentProfile();
+
+  if(!profile){
+    profile = await promptForStudentSetup();
+  }
+
+  await hydrateFromBackend();
+  showScreen('start');
+}
+
+function promptForStudentSetup(){
+  return new Promise((resolve) => {
+    showScreen('setup');
+    const form = document.getElementById('setupForm');
+    const nameInput = document.getElementById('setupNameInput');
+    const periodInput = document.getElementById('setupPeriodInput');
+    const errorEl = document.getElementById('setupError');
+
+    form.addEventListener('submit', async function onSubmit(e){
+      e.preventDefault();
+      const name = nameInput.value.trim();
+      if(!name) return;
+      const created = await VocabBackend.createStudentProfile(name, periodInput.value.trim());
+      if(!created){
+        errorEl.textContent = 'Something went wrong saving your name — try again.';
+        return;
+      }
+      form.removeEventListener('submit', onSubmit);
+      resolve(created);
+    });
+  });
+}
+
+async function hydrateFromBackend(){
+  const progress = await VocabBackend.loadStudentProgress(VocabBackend.CURRENT_SET_ID);
+
+  wordStats = progress.wordStats || {};
+  coins = progress.coins || 0;
+  coinValueEl.textContent = coins;
+
+  const modeCounts = progress.modeCounts || {};
+  totalTypingAnswered = modeCounts.typing || 0;
+  totalListeningAnswered = modeCounts.listening || 0;
+  totalDictationAnswered = modeCounts.dictation || 0;
+  totalContextAnswered = modeCounts.context || 0;
+
+  updateLevelSelect();
+}
+
+initApp();
