@@ -25,6 +25,16 @@ const VOCAB = [
   { number: 8,  word: 'ocho',   audio: 'assets/audio/ocho.mp3?v=2',   context: 'La araña tiene ___ patas.' },
   { number: 9,  word: 'nueve',  audio: 'assets/audio/nueve.mp3?v=2',  context: 'El partido empieza a las ___ (9).' },
   { number: 10, word: 'diez',   audio: 'assets/audio/diez.mp3?v=2',   context: 'Tengo ___ dedos en las manos.' },
+  { number: 11, word: 'once',       audio: 'assets/audio/once.mp3',       context: 'Tengo ___ (11) lápices en mi mochila.' },
+  { number: 12, word: 'doce',       audio: 'assets/audio/doce.mp3',       context: 'Una docena tiene ___ huevos.' },
+  { number: 13, word: 'trece',      audio: 'assets/audio/trece.mp3',      context: 'Tengo ___ (13) canicas en la bolsa.' },
+  { number: 14, word: 'catorce',    audio: 'assets/audio/catorce.mp3',    context: 'El día de San Valentín es el ___ de febrero.' },
+  { number: 15, word: 'quince',     audio: 'assets/audio/quince.mp3',     context: 'Una quinceañera cumple ___ años.' },
+  { number: 16, word: 'dieciséis',  audio: 'assets/audio/dieciseis.mp3',  context: 'Tengo ___ (16) crayones en la caja.' },
+  { number: 17, word: 'diecisiete', audio: 'assets/audio/diecisiete.mp3', context: 'Hay ___ (17) estrellas en el dibujo.' },
+  { number: 18, word: 'dieciocho',  audio: 'assets/audio/dieciocho.mp3',  context: 'A los ___ años, puedes votar en Estados Unidos.' },
+  { number: 19, word: 'diecinueve', audio: 'assets/audio/diecinueve.mp3', context: 'Tengo ___ (19) monedas en el bolsillo.' },
+  { number: 20, word: 'veinte',     audio: 'assets/audio/veinte.mp3',     context: 'Dos personas tienen ___ dedos en total.' },
 ];
 
 const PAIRS_PER_ROUND = 6;
@@ -51,7 +61,7 @@ const SPEED_TIME_LIMIT_MS = 6000; // seconds to answer before it's marked wrong
 
 // English number words 0-10 — accepted as equivalent to the digit when the
 // expected answer is a number (e.g. typing "one" counts the same as "1").
-const ENGLISH_NUMBER_WORDS = ['zero','one','two','three','four','five','six','seven','eight','nine','ten'];
+const ENGLISH_NUMBER_WORDS = ['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen','twenty'];
 
 // ---- Per-word performance memory -------------------------------------
 // Persisted per student via Supabase — hydrated on load in initApp(),
