@@ -130,6 +130,17 @@ html,body{
   transition:transform 150ms ease;
 }
 .set-current-btn.is-open .set-current-chevron{ transform:rotate(180deg); }
+.set-review-badge{
+  font-size:0.68rem;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.3px;
+  color:var(--jungle-deep);
+  background:var(--coral);
+  padding:3px 9px;
+  border-radius:999px;
+}
+.set-review-badge[hidden]{ display:none; }
 
 .set-dropdown{
   position:absolute;

@@ -450,6 +450,7 @@ const levelSelectEl = document.getElementById('levelSelect');
 const setSelectEl = document.getElementById('setSelect');
 const setCurrentBtn = document.getElementById('setCurrentBtn');
 const setCurrentName = document.getElementById('setCurrentName');
+const setReviewBadge = document.getElementById('setReviewBadge');
 const setDropdown = document.getElementById('setDropdown');
 let activeSetId = VocabBackend.DEFAULT_SET_ID;
 const levelButtons = {
@@ -481,6 +482,31 @@ async function isSetUnlocked(setId){
   const set = VOCAB_SETS[setId];
   if(!set || !set.previousSetId) return true; // first set is always open
   return VocabBackend.isSetFullyGraduated(set.previousSetId);
+}
+
+// ---- Recency-based scoring -------------------------------------------
+// Working on your "frontier" set (the most advanced one you've unlocked)
+// pays full points. Going back to review an earlier, already-passed set
+// still works in every modality, but pays reduced points — review is
+// always available and rewarded, just never as profitable as moving
+// forward, per her design.
+const REVIEW_MULTIPLIER = 0.5;
+let isReviewSet = false;
+
+async function updateReviewStatus(){
+  const orderedSets = Object.values(VOCAB_SETS).sort((a, b) => a.order - b.order);
+  const unlockResults = await Promise.all(orderedSets.map(set => isSetUnlocked(set.id)));
+  let frontierOrder = 0;
+  orderedSets.forEach((set, i) => {
+    if(unlockResults[i]) frontierOrder = set.order;
+  });
+  const activeOrder = VOCAB_SETS[activeSetId] ? VOCAB_SETS[activeSetId].order : 0;
+  isReviewSet = activeOrder < frontierOrder;
+  setReviewBadge.hidden = !isReviewSet;
+}
+
+function applyReviewMultiplier(points){
+  return isReviewSet ? Math.max(1, Math.round(points * REVIEW_MULTIPLIER)) : points;
 }
 
 async function renderSetSelect(){
@@ -547,6 +573,7 @@ async function switchToSet(setId){
   recentContinuousWords.length = 0;
 
   await hydrateFromBackend();
+  await updateReviewStatus();
   await renderSetSelect();
 }
 
@@ -563,6 +590,7 @@ function showScreen(name){
   setSelectEl.hidden = (name === 'game' || name === 'setup');
   if(name !== 'game' && name !== 'setup'){
     updateLevelSelect();
+    updateReviewStatus();
     renderSetSelect();
     stopSpeedTimer();
   }
@@ -703,7 +731,7 @@ function resolveMatch(a, b){
   // as participation, but does not register as mastery progress.
   const countsForMastery = !tabSwitchedDuringRound;
   if(countsForMastery){
-    s.correct += MODALITY_WEIGHT.matching;
+    s.correct += applyReviewMultiplier(MODALITY_WEIGHT.matching);
     markWordStatsChanged('matching', number);
   }
   state.correctAttempts++;
@@ -714,7 +742,7 @@ function resolveMatch(a, b){
     b.classList.add('is-matched');
     state.matchedCount++;
 
-    const bonus = (state.streak >= 3 ? 2 : 1) * MODALITY_WEIGHT.matching;
+    const bonus = applyReviewMultiplier((state.streak >= 3 ? 2 : 1) * MODALITY_WEIGHT.matching);
     earnCoins(bonus);
     showToast(state.streak >= 3 ? '¡Racha! +' + bonus : `¡Correcto! +${bonus}`);
 
@@ -980,7 +1008,7 @@ function resolveSequenceRoundComplete(){
     if(noMistakes){
       const countsForMastery = !tabSwitchedDuringRound;
       if(countsForMastery){
-        s.correct += SEQUENCE_WEIGHT;
+        s.correct += applyReviewMultiplier(SEQUENCE_WEIGHT);
         markWordStatsChanged('sequence', item.number);
       }
     } else {
@@ -992,7 +1020,7 @@ function resolveSequenceRoundComplete(){
   if(noMistakes){
     state.correctAttempts++;
     state.streak++;
-    const bonus = (state.streak >= 3 ? 2 : 1) * SEQUENCE_WEIGHT;
+    const bonus = applyReviewMultiplier((state.streak >= 3 ? 2 : 1) * SEQUENCE_WEIGHT);
     earnCoins(bonus);
     typingFeedback.textContent = state.streak >= 3 ? `¡Racha! +${bonus}` : `¡Correcto! +${bonus}`;
     typingFeedback.className = 'typing-feedback correct';
@@ -1023,7 +1051,7 @@ function resolveBonusClick(isCorrect, attributedNumber, wrongFeedbackText){
     if(isCorrect){
       const countsForMastery = !tabSwitchedDuringRound;
       if(countsForMastery){
-        s.correct += BONUS_WEIGHT;
+        s.correct += applyReviewMultiplier(BONUS_WEIGHT);
         markWordStatsChanged('bonus', attributedNumber);
       }
     } else {
@@ -1035,7 +1063,7 @@ function resolveBonusClick(isCorrect, attributedNumber, wrongFeedbackText){
   if(isCorrect){
     state.correctAttempts++;
     state.streak++;
-    const bonus = (state.streak >= 3 ? 2 : 1) * BONUS_WEIGHT;
+    const bonus = applyReviewMultiplier((state.streak >= 3 ? 2 : 1) * BONUS_WEIGHT);
     earnCoins(bonus);
     typingFeedback.textContent = state.streak >= 3 ? `¡Racha! +${bonus}` : `¡Correcto! +${bonus}`;
     typingFeedback.className = 'typing-feedback correct';
@@ -1331,12 +1359,12 @@ function resolveTypingAnswer(rawGiven){
   if(isCorrect){
     const countsForMastery = !tabSwitchedDuringRound;
     if(countsForMastery){
-      s.correct += weight;
+      s.correct += applyReviewMultiplier(weight);
       markWordStatsChanged(state.mode, v.number);
     }
     state.correctAttempts++;
     state.streak++;
-    const bonus = (state.streak >= 3 ? 2 : 1) * weight;
+    const bonus = applyReviewMultiplier((state.streak >= 3 ? 2 : 1) * weight);
     earnCoins(bonus);
     typingFeedback.textContent = state.streak >= 3 ? `¡Racha! +${bonus}` : `¡Correcto! +${bonus}`;
     typingFeedback.classList.add('correct');
@@ -1387,6 +1415,7 @@ async function initApp(){
   }
 
   await hydrateFromBackend();
+  await updateReviewStatus();
   await renderSetSelect();
   showScreen('start');
 }
