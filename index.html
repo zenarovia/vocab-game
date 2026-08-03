@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=24">
+<link rel="stylesheet" href="css/style.css?v=26">
 </head>
 <body>
 
@@ -15,7 +15,7 @@
 
   <!-- Ambient background pattern -->
   <div class="bg-pattern" aria-hidden="true"></div>
-  <div class="build-tag" aria-hidden="true">build 25</div>
+  <div class="build-tag" aria-hidden="true">build 26</div>
 
   <!-- Top bar: coin counter + mascot egg -->
   <header class="topbar">
@@ -61,6 +61,11 @@
     <button class="level-btn" id="levelBtnSpeed" data-mode="speed" type="button" disabled>
       <span class="level-icon">⚡</span>
       <span class="level-name">Speed</span>
+      <span class="level-lock" aria-hidden="true">🔒</span>
+    </button>
+    <button class="level-btn" id="levelBtnBonus" data-mode="bonus" type="button" disabled>
+      <span class="level-icon">🎉</span>
+      <span class="level-name">Bonus</span>
       <span class="level-lock" aria-hidden="true">🔒</span>
     </button>
   </div>
@@ -118,6 +123,13 @@
         />
         <button type="submit" class="btn-primary btn-small">Enviar</button>
       </form>
+
+      <div class="tf-buttons" id="tfButtons" hidden>
+        <button type="button" class="btn-tf btn-tf-yes" id="btnTfYes">Sí</button>
+        <button type="button" class="btn-tf btn-tf-no" id="btnTfNo">No</button>
+      </div>
+
+      <div class="oddoneout-grid" id="oddOneOutGrid" hidden></div>
 
       <div class="accent-row" id="accentRow" role="group" aria-label="Insert accent mark">
         <button type="button" class="accent-key" data-char="á">á</button>
@@ -188,6 +200,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase-client.js"></script>
-<script src="js/game.js?v=24"></script>
+<script src="js/game.js?v=26"></script>
 </body>
 </html>

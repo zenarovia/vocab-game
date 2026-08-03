@@ -58,6 +58,7 @@ const DICTATION_WEIGHT = 4;
 const CONTEXT_WEIGHT = 5; // fill-in-context — continues the increasing scale
 const SPEED_WEIGHT = 6;   // speed challenge — the hardest, final level
 const SPEED_TIME_LIMIT_MS = 6000; // seconds to answer before it's marked wrong
+const BONUS_WEIGHT = 6;   // bonus games (math facts, true/false, odd-one-out) — reward/review tier, same weight as Speed
 
 // English number words 0-10 — accepted as equivalent to the digit when the
 // expected answer is a number (e.g. typing "one" counts the same as "1").
@@ -132,14 +133,15 @@ function pickNextContinuousWord(pool){
 // ---- Level unlocking + pool selection (manual level-select) -----------
 // Students now pick which level to play from the always-visible level bar,
 // rather than the system deciding automatically. Strictly sequential:
-// Matching → Typing → Listening → Dictation → Context → Speed. Each level
-// requires the previous one to be both unlocked AND genuinely practiced
-// (not just unlocked a second ago) before the next one opens up.
+// Matching → Typing → Listening → Dictation → Context → Speed → Bonus.
+// Each level requires the previous one to be both unlocked AND genuinely
+// practiced (not just unlocked a second ago) before the next one opens up.
 const GRADUATION_THRESHOLD_COUNT = 3; // words needed before Typing unlocks
 let totalTypingAnswered = 0;    // practice done in Typing — gates Listening
 let totalListeningAnswered = 0; // practice done in Listening — gates Dictation
 let totalDictationAnswered = 0; // practice done in Dictation — gates Fill-in-context
 let totalContextAnswered = 0;   // practice done in Context — gates Speed
+let totalSpeedAnswered = 0;     // practice done in Speed — gates Bonus
 
 function masteryScore(number){
   const s = statsFor(number);
@@ -155,6 +157,7 @@ function isModeUnlocked(mode){
   if(mode === 'dictation') return isModeUnlocked('listening') && totalListeningAnswered >= MIN_TYPING_QUESTIONS;
   if(mode === 'context') return isModeUnlocked('dictation') && totalDictationAnswered >= MIN_TYPING_QUESTIONS;
   if(mode === 'speed') return isModeUnlocked('context') && totalContextAnswered >= MIN_TYPING_QUESTIONS;
+  if(mode === 'bonus') return isModeUnlocked('speed') && totalSpeedAnswered >= MIN_TYPING_QUESTIONS;
   return false;
 }
 function poolForMode(mode){
@@ -372,6 +375,8 @@ const state = {
   typingQuestionCount: 0,   // how many questions answered so far (open-ended)
   currentTypingWord: null,  // the word currently being asked
   typingPromptKind: 'number', // what's shown: 'number' -> answer word, or 'word' -> answer number
+  bonusFormat: null,  // 'mathfacts' | 'truefalse' | 'oddoneout' — current bonus sub-format
+  tfIsTrue: null,     // true/false format: is the shown statement correct?
 };
 
 // ---- DOM refs ----------------------------------------------------------
@@ -387,6 +392,10 @@ const typingPrompt = document.getElementById('typingPrompt');
 const contextImage = document.getElementById('contextImage');
 const speedTimerTrack = document.getElementById('speedTimerTrack');
 const speedTimerFill = document.getElementById('speedTimerFill');
+const tfButtons = document.getElementById('tfButtons');
+const btnTfYes = document.getElementById('btnTfYes');
+const btnTfNo = document.getElementById('btnTfNo');
+const oddOneOutGrid = document.getElementById('oddOneOutGrid');
 const typingInstruction = document.getElementById('typingInstruction');
 const typingForm = document.getElementById('typingForm');
 const typingInput = document.getElementById('typingInput');
@@ -409,6 +418,7 @@ const levelButtons = {
   dictation: document.getElementById('levelBtnDictation'),
   context: document.getElementById('levelBtnContext'),
   speed: document.getElementById('levelBtnSpeed'),
+  bonus: document.getElementById('levelBtnBonus'),
 };
 
 function updateLevelSelect(){
@@ -455,7 +465,7 @@ function startRound(mode){
   state.roundCoinsEarned = 0;
   tabSwitchedDuringRound = false;
 
-  if(mode === 'typing' || mode === 'listening' || mode === 'dictation' || mode === 'context' || mode === 'speed'){
+  if(mode === 'typing' || mode === 'listening' || mode === 'dictation' || mode === 'context' || mode === 'speed' || mode === 'bonus'){
     startTypingRound(pool);
   } else {
     startMatchingRound(pool);
@@ -616,7 +626,7 @@ function resolveWrong(a, b){
 }
 
 function updateProgress(){
-  if(state.mode === 'typing' || state.mode === 'listening' || state.mode === 'dictation' || state.mode === 'context' || state.mode === 'speed'){
+  if(state.mode === 'typing' || state.mode === 'listening' || state.mode === 'dictation' || state.mode === 'context' || state.mode === 'speed' || state.mode === 'bonus'){
     pairsLeftEl.textContent = state.typingQuestionCount === 1
       ? '1 question so far'
       : `${state.typingQuestionCount} questions so far`;
@@ -643,7 +653,7 @@ function finishRound(){
   const matchingStat = document.getElementById('matchingCompleteStat');
   const typingStat = document.getElementById('typingAccuracyStat');
 
-  if(state.mode === 'typing' || state.mode === 'listening' || state.mode === 'dictation' || state.mode === 'context' || state.mode === 'speed'){
+  if(state.mode === 'typing' || state.mode === 'listening' || state.mode === 'dictation' || state.mode === 'context' || state.mode === 'speed' || state.mode === 'bonus'){
     const total = state.correctAttempts + state.wrongAttempts;
     const accuracy = total > 0 ? Math.round((state.correctAttempts/total)*100) : 100;
     document.getElementById('finalAccuracy').textContent = accuracy;
@@ -684,7 +694,7 @@ function finishRound(){
 // real practice. Both modes keep presenting words (repeating/cycling,
 // still weighted toward struggling ones) until the student taps Finish.
 function startTypingRound(pool){
-  const modeLabels = { typing: 'Typing', listening: 'Listening', dictation: 'Dictation', context: 'Fill-in-Context', speed: 'Speed Challenge' };
+  const modeLabels = { typing: 'Typing', listening: 'Listening', dictation: 'Dictation', context: 'Fill-in-Context', speed: 'Speed Challenge', bonus: 'Bonus' };
   modeLabelEl.textContent = modeLabels[state.mode];
   board.hidden = true;
   typingPanel.hidden = false;
@@ -727,12 +737,139 @@ function stopSpeedTimer(){
   clearTimeout(speedUrgentId);
 }
 
+// ---- Bonus games: math facts, true/false, odd-one-out ---------------------
+// A variety/reward tier for early finishers — mixes three quick formats
+// rather than one repeated drill. Math facts flows through the existing
+// text-answer engine (state.currentTypingWord is set to the sum's VOCAB
+// entry); true/false and odd-one-out are click-based and resolved here.
+function pickMathFactsQuestion(){
+  const maxNum = VOCAB[VOCAB.length - 1].number;
+  const a = VOCAB[Math.floor(Math.random() * VOCAB.length)];
+  const bCandidates = VOCAB.filter(v => v.number <= maxNum - a.number);
+  const b = bCandidates[Math.floor(Math.random() * bCandidates.length)];
+  const sum = a.number + b.number;
+  const sumEntry = VOCAB.find(v => v.number === sum);
+  return { a, b, sumEntry };
+}
+
+function pickTrueFalseQuestion(){
+  const v = pickNextContinuousWord(state.typingPool);
+  const isTrue = Math.random() < 0.5;
+  let displayNumber = v.number;
+  if(!isTrue){
+    const others = VOCAB.filter(o => o.number !== v.number);
+    displayNumber = others[Math.floor(Math.random() * others.length)].number;
+  }
+  return { v, displayNumber, isTrue };
+}
+
+function pickOddOneOutQuestion(){
+  const groupIsEven = Math.random() < 0.5;
+  const matching = VOCAB.filter(v => (v.number % 2 === 0) === groupIsEven);
+  const nonMatching = VOCAB.filter(v => (v.number % 2 === 0) !== groupIsEven);
+  const shuffledMatching = [...matching].sort(() => Math.random() - 0.5).slice(0, 3);
+  const oddOne = nonMatching[Math.floor(Math.random() * nonMatching.length)];
+  const items = [...shuffledMatching, oddOne].sort(() => Math.random() - 0.5);
+  return { items, oddOneNumber: oddOne.number };
+}
+
+function renderOddOneOutTiles(items, oddOneNumber){
+  oddOneOutGrid.innerHTML = '';
+  items.forEach(item => {
+    const tile = document.createElement('div');
+    tile.className = 'oddoneout-tile';
+    const canvas = createWordCanvas();
+    canvas.dataset.text = item.word;
+    tile.appendChild(canvas);
+    tile.addEventListener('click', () => {
+      const isCorrect = item.number === oddOneNumber;
+      const correctWord = VOCAB.find(v => v.number === oddOneNumber).word;
+      resolveBonusClick(isCorrect, null, isCorrect ? null : `Era "${correctWord}"`);
+    });
+    oddOneOutGrid.appendChild(tile);
+  });
+  requestAnimationFrame(() => {
+    const tiles = oddOneOutGrid.querySelectorAll('.oddoneout-tile');
+    tiles.forEach((tile, i) => {
+      const canvas = tile.querySelector('canvas');
+      const rect = tile.getBoundingClientRect();
+      fitWordCanvas(canvas, items[i].word, rect.width - 16, rect.height - 16);
+    });
+  });
+}
+
+// Shared resolver for the click-based bonus sub-formats (true/false,
+// odd-one-out) — mirrors resolveTypingAnswer's bookkeeping (coins,
+// streak, question count) without forcing a single-word attribution
+// for formats that don't cleanly map to one word (odd-one-out).
+function resolveBonusClick(isCorrect, attributedNumber, wrongFeedbackText){
+  stopSpeedTimer();
+
+  if(attributedNumber !== null && attributedNumber !== undefined){
+    const s = statsFor(attributedNumber);
+    if(isCorrect){
+      const countsForMastery = !tabSwitchedDuringRound;
+      if(countsForMastery){
+        s.correct += BONUS_WEIGHT;
+        markWordStatsChanged(attributedNumber);
+      }
+    } else {
+      s.wrong++;
+      markWordStatsChanged(attributedNumber);
+    }
+  }
+
+  if(isCorrect){
+    state.correctAttempts++;
+    state.streak++;
+    const bonus = (state.streak >= 3 ? 2 : 1) * BONUS_WEIGHT;
+    earnCoins(bonus);
+    typingFeedback.textContent = state.streak >= 3 ? `¡Racha! +${bonus}` : `¡Correcto! +${bonus}`;
+    typingFeedback.className = 'typing-feedback correct';
+  } else {
+    state.wrongAttempts++;
+    state.streak = 0;
+    typingFeedback.textContent = wrongFeedbackText || 'Inténtalo la próxima vez.';
+    typingFeedback.className = 'typing-feedback wrong';
+  }
+
+  state.typingQuestionCount++;
+  updateProgress();
+
+  btnTfYes.disabled = true;
+  btnTfNo.disabled = true;
+  Array.from(oddOneOutGrid.children).forEach(el => { el.style.pointerEvents = 'none'; });
+
+  setTimeout(() => {
+    btnTfYes.disabled = false;
+    btnTfNo.disabled = false;
+    renderTypingWord();
+  }, isCorrect ? 550 : 1400);
+}
+
+btnTfYes.addEventListener('click', () => {
+  if(state.mode !== 'bonus' || state.bonusFormat !== 'truefalse') return;
+  const isCorrect = state.tfIsTrue === true;
+  const correctLabel = state.tfIsTrue ? null : `${state.currentTypingWord.word} = ${state.currentTypingWord.number}`;
+  resolveBonusClick(isCorrect, state.currentTypingWord.number, correctLabel);
+});
+btnTfNo.addEventListener('click', () => {
+  if(state.mode !== 'bonus' || state.bonusFormat !== 'truefalse') return;
+  const isCorrect = state.tfIsTrue === false;
+  const correctLabel = state.tfIsTrue ? `${state.currentTypingWord.word} = ${state.currentTypingWord.number}` : null;
+  resolveBonusClick(isCorrect, state.currentTypingWord.number, correctLabel);
+});
+
 function renderTypingWord(){
   typingFeedback.textContent = '';
   typingFeedback.className = 'typing-feedback';
   typingInput.value = '';
   typingInput.classList.remove('is-wrong');
   typingInput.disabled = false;
+  typingForm.hidden = false;
+  accentRow.hidden = false;
+  tfButtons.hidden = true;
+  oddOneOutGrid.hidden = true;
 
   // Pick one word, weighted toward ones missed more, while avoiding an
   // immediate repeat of the last couple of words asked.
@@ -784,6 +921,73 @@ function renderTypingWord(){
     } else {
       contextImage.hidden = true;
       contextImage.removeAttribute('src');
+    }
+  } else if(state.mode === 'bonus'){
+    // Three mini-formats mixed for variety, reusing this same answer
+    // panel/engine — a reward tier for early finishers, not a new
+    // vocab-difficulty escalation, so it shares Speed's weight.
+    contextImage.hidden = true;
+    contextImage.removeAttribute('src');
+    listeningControls.hidden = true;
+    speedTimerTrack.hidden = true;
+    stopSpeedTimer();
+    typingPanel.classList.remove('is-dictation');
+
+    const formats = ['mathfacts', 'truefalse', 'oddoneout'];
+    state.bonusFormat = formats[Math.floor(Math.random() * formats.length)];
+
+    if(state.bonusFormat === 'mathfacts'){
+      typingInstruction.textContent = 'Resuelve:';
+      const { a, b, sumEntry } = pickMathFactsQuestion();
+      state.currentTypingWord = sumEntry;
+      state.typingPromptKind = Math.random() < 0.5 ? 'number' : 'word';
+      const equation = `${a.word} más ${b.word} son ___`;
+
+      typingPrompt.hidden = false;
+      typingPrompt.classList.add('is-sentence');
+      typingPrompt.innerHTML = '';
+      const canvas = createWordCanvas();
+      canvas.dataset.text = equation;
+      typingPrompt.appendChild(canvas);
+      requestAnimationFrame(() => {
+        const rect = typingPrompt.getBoundingClientRect();
+        const cs = getComputedStyle(typingPrompt);
+        const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+        const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+        fitSentenceCanvas(canvas, equation, rect.width - padX, rect.height - padY);
+      });
+    } else if(state.bonusFormat === 'truefalse'){
+      typingInstruction.textContent = '¿Es correcto?';
+      const { v: tfWord, displayNumber, isTrue } = pickTrueFalseQuestion();
+      state.currentTypingWord = tfWord;
+      state.tfIsTrue = isTrue;
+      const statement = `${tfWord.word} = ${displayNumber}`;
+
+      typingForm.hidden = true;
+      accentRow.hidden = true;
+      typingPrompt.hidden = false;
+      typingPrompt.classList.remove('is-sentence');
+      typingPrompt.innerHTML = '';
+      const canvas = createWordCanvas();
+      canvas.dataset.text = statement;
+      typingPrompt.appendChild(canvas);
+      requestAnimationFrame(() => {
+        const rect = typingPrompt.getBoundingClientRect();
+        const cs = getComputedStyle(typingPrompt);
+        const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+        const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+        fitWordCanvas(canvas, statement, rect.width - padX, rect.height - padY);
+      });
+      tfButtons.hidden = false;
+    } else {
+      typingInstruction.textContent = 'Toca el que no pertenece:';
+      typingForm.hidden = true;
+      accentRow.hidden = true;
+      typingPrompt.hidden = true;
+      state.currentTypingWord = null;
+      const { items, oddOneNumber } = pickOddOneOutQuestion();
+      renderOddOneOutTiles(items, oddOneNumber);
+      oddOneOutGrid.hidden = false;
     }
   } else {
     contextImage.hidden = true;
@@ -885,6 +1089,7 @@ function resolveTypingAnswer(rawGiven){
   const weight = isContext ? CONTEXT_WEIGHT
     : isDictation ? DICTATION_WEIGHT
     : isSpeed ? SPEED_WEIGHT
+    : state.mode === 'bonus' ? BONUS_WEIGHT
     : MODALITY_WEIGHT[state.mode];
 
   if(isCorrect){
@@ -916,6 +1121,7 @@ function resolveTypingAnswer(rawGiven){
   if(state.mode === 'listening'){ totalListeningAnswered++; VocabBackend.saveModeCount(VocabBackend.CURRENT_SET_ID, 'listening', totalListeningAnswered); }
   if(state.mode === 'dictation'){ totalDictationAnswered++; VocabBackend.saveModeCount(VocabBackend.CURRENT_SET_ID, 'dictation', totalDictationAnswered); }
   if(state.mode === 'context'){ totalContextAnswered++; VocabBackend.saveModeCount(VocabBackend.CURRENT_SET_ID, 'context', totalContextAnswered); }
+  if(state.mode === 'speed'){ totalSpeedAnswered++; VocabBackend.saveModeCount(VocabBackend.CURRENT_SET_ID, 'speed', totalSpeedAnswered); }
   updateProgress();
   typingInput.disabled = true;
 
@@ -982,6 +1188,7 @@ async function hydrateFromBackend(){
   totalListeningAnswered = modeCounts.listening || 0;
   totalDictationAnswered = modeCounts.dictation || 0;
   totalContextAnswered = modeCounts.context || 0;
+  totalSpeedAnswered = modeCounts.speed || 0;
 
   updateLevelSelect();
 }
