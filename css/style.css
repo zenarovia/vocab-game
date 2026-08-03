@@ -87,6 +87,63 @@ html,body{
 .btn-leaderboard:hover{ border-color:var(--marigold); }
 .btn-leaderboard[hidden]{ display:none; }
 
+/* ---------- Teacher override ---------- */
+.teacher-overlay{
+  position:fixed;
+  inset:0;
+  z-index:50;
+  background:rgba(10,43,44,0.85);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+}
+.teacher-overlay[hidden]{ display:none; }
+.teacher-panel{
+  background:var(--jungle);
+  border:2px solid rgba(255,182,39,0.4);
+  border-radius:var(--radius-lg);
+  padding:28px;
+  max-width:360px;
+  width:100%;
+  text-align:center;
+}
+.teacher-panel-title{
+  font-family:var(--font-display);
+  font-weight:800;
+  font-size:1.3rem;
+  color:var(--marigold);
+  margin-bottom:10px;
+}
+.teacher-panel #teacherPasscodeInput{
+  width:100%;
+  margin:14px 0;
+  text-align:center;
+}
+.teacher-panel-buttons{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin-top:16px;
+}
+.teacher-override-badge{
+  position:fixed;
+  top:10px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:40;
+  background:var(--marigold);
+  color:var(--jungle-deep);
+  font-family:var(--font-display);
+  font-weight:700;
+  font-size:0.78rem;
+  padding:6px 16px;
+  border-radius:999px;
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+}
+.teacher-override-badge[hidden]{ display:none; }
+
 .coin-counter{
   display:flex; align-items:center; gap:8px;
   background:rgba(255,255,255,0.06);

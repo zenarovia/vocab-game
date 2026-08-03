@@ -178,6 +178,7 @@ function getGraduatedWords(){
   return VOCAB.filter(v => masteryScore(v.number) >= 1);
 }
 function isModeUnlocked(mode){
+  if(teacherOverrideActive) return true; // whole-class activity — bypasses individual progress
   if(mode === 'matching') return true;
   if(mode === 'typing') return getGraduatedWords().length >= GRADUATION_THRESHOLD_COUNT;
   if(mode === 'listening') return isModeUnlocked('typing') && totalTypingAnswered >= MIN_TYPING_QUESTIONS;
@@ -463,6 +464,7 @@ const setAssignedBadge = document.getElementById('setAssignedBadge');
 const setDropdown = document.getElementById('setDropdown');
 let activeSetId = VocabBackend.DEFAULT_SET_ID;
 let assignedSetId = null; // teacher-assigned set for this student's class period, if any
+let teacherOverrideActive = false; // whole-class activity mode — bypasses individual unlock progress
 const levelButtons = {
   matching: document.getElementById('levelBtnMatching'),
   typing: document.getElementById('levelBtnTyping'),
@@ -489,6 +491,7 @@ function updateLevelSelect(){
 // swaps VOCAB, resets in-memory progress, and re-hydrates from the
 // backend for that set specifically.
 async function isSetUnlocked(setId){
+  if(teacherOverrideActive) return true;
   const set = VOCAB_SETS[setId];
   if(!set || !set.previousSetId) return true; // first set is always open
   return VocabBackend.isSetFullyGraduated(set.previousSetId);
@@ -634,6 +637,72 @@ async function renderLeaderboard(){
     leaderboardList.appendChild(el);
   });
 }
+
+// ---- Teacher override / class-activity-mode -------------------------------
+// A hidden long-press on the mascot icon opens a passcode-gated panel.
+// Once entered, every level (and set) unlocks for this browser session
+// only — meant for a teacher running a whole-class activity, not a
+// permanent change. Change TEACHER_OVERRIDE_PASSCODE below to whatever
+// you want it to be.
+const TEACHER_OVERRIDE_PASSCODE = '4242';
+const LONG_PRESS_MS = 1200;
+
+const brandTeacherTrigger = document.getElementById('brandTeacherTrigger');
+const teacherOverlay = document.getElementById('teacherOverlay');
+const teacherPasscodeStep = document.getElementById('teacherPasscodeStep');
+const teacherActiveStep = document.getElementById('teacherActiveStep');
+const teacherPasscodeInput = document.getElementById('teacherPasscodeInput');
+const teacherPasscodeError = document.getElementById('teacherPasscodeError');
+const teacherOverrideBadge = document.getElementById('teacherOverrideBadge');
+
+let longPressTimer = null;
+function startLongPress(){
+  longPressTimer = setTimeout(openTeacherOverlay, LONG_PRESS_MS);
+}
+function cancelLongPress(){
+  clearTimeout(longPressTimer);
+}
+brandTeacherTrigger.addEventListener('pointerdown', startLongPress);
+brandTeacherTrigger.addEventListener('pointerup', cancelLongPress);
+brandTeacherTrigger.addEventListener('pointerleave', cancelLongPress);
+
+function openTeacherOverlay(){
+  teacherOverlay.hidden = false;
+  if(teacherOverrideActive){
+    teacherPasscodeStep.hidden = true;
+    teacherActiveStep.hidden = false;
+  } else {
+    teacherPasscodeStep.hidden = false;
+    teacherActiveStep.hidden = true;
+    teacherPasscodeInput.value = '';
+    teacherPasscodeError.textContent = '';
+  }
+}
+function closeTeacherOverlay(){
+  teacherOverlay.hidden = true;
+}
+
+document.getElementById('btnTeacherSubmit').addEventListener('click', () => {
+  if(teacherPasscodeInput.value === TEACHER_OVERRIDE_PASSCODE){
+    teacherOverrideActive = true;
+    teacherOverrideBadge.hidden = false;
+    teacherPasscodeStep.hidden = true;
+    teacherActiveStep.hidden = false;
+    updateLevelSelect();
+    renderSetSelect();
+  } else {
+    teacherPasscodeError.textContent = 'Incorrect passcode.';
+  }
+});
+document.getElementById('btnTeacherCancel').addEventListener('click', closeTeacherOverlay);
+document.getElementById('btnTeacherClose').addEventListener('click', closeTeacherOverlay);
+document.getElementById('btnTeacherOff').addEventListener('click', () => {
+  teacherOverrideActive = false;
+  teacherOverrideBadge.hidden = true;
+  updateLevelSelect();
+  renderSetSelect();
+  closeTeacherOverlay();
+});
 
 function showScreen(name){
   Object.entries(screens).forEach(([k, el]) => el.hidden = (k !== name));

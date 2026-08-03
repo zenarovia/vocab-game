@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=37">
+<link rel="stylesheet" href="css/style.css?v=38">
 </head>
 <body>
 
@@ -15,11 +15,13 @@
 
   <!-- Ambient background pattern -->
   <div class="bg-pattern" aria-hidden="true"></div>
-  <div class="build-tag" aria-hidden="true">build 37</div>
+  <div class="build-tag" aria-hidden="true">build 38</div>
+  <div class="teacher-override-badge" id="teacherOverrideBadge" hidden>Teacher override active</div>
 
-  <!-- Top bar: coin counter + mascot egg -->
+  <!-- Top bar: coin counter + mascot egg. The mascot egg doubles as a
+       hidden long-press trigger for the teacher override panel. -->
   <header class="topbar">
-    <div class="brand">
+    <div class="brand" id="brandTeacherTrigger">
       <span class="brand-mark">🥚</span>
       <span class="brand-name">Número Nest</span>
     </div>
@@ -29,6 +31,32 @@
       <span class="coin-value" id="coinValue">0</span>
     </div>
   </header>
+
+  <!-- Teacher override: hidden panel, opened by a long-press on the
+       mascot icon + a passcode. Once entered, every level unlocks for
+       this session — for whole-class activities regardless of where
+       individual students' progress stands. -->
+  <div class="teacher-overlay" id="teacherOverlay" hidden>
+    <div class="teacher-panel">
+      <h2 class="teacher-panel-title">Teacher Override</h2>
+      <div id="teacherPasscodeStep">
+        <p class="subtitle">Enter the passcode to unlock every level for this session.</p>
+        <input type="password" id="teacherPasscodeInput" class="typing-input" placeholder="Passcode" autocomplete="off" />
+        <p class="typing-feedback wrong" id="teacherPasscodeError"></p>
+        <div class="teacher-panel-buttons">
+          <button class="btn-primary btn-small" id="btnTeacherSubmit" type="button">Unlock</button>
+          <button class="set-option" id="btnTeacherCancel" type="button">Cancel</button>
+        </div>
+      </div>
+      <div id="teacherActiveStep" hidden>
+        <p class="subtitle">Every level is unlocked for this session. Pick one to jump straight into it for a class activity.</p>
+        <div class="teacher-panel-buttons">
+          <button class="set-option" id="btnTeacherOff" type="button">Turn off override</button>
+          <button class="set-option" id="btnTeacherClose" type="button">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Set select: current/assigned set stays prominent; other available
        sets live in a dropdown so this scales to a large library instead
@@ -233,6 +261,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase-client.js"></script>
-<script src="js/game.js?v=37"></script>
+<script src="js/game.js?v=38"></script>
 </body>
 </html>
