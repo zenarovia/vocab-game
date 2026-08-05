@@ -389,7 +389,7 @@ async function loadMascots(){
   if(!currentStudentId) return [];
   const { data, error } = await sb
     .from('student_mascots')
-    .select('mascot_id, rarity, species, icon')
+    .select('mascot_id, rarity, species, icon, image_url')
     .eq('student_id', currentStudentId);
   if(error){
     console.error('Failed to load mascots:', error);
@@ -411,12 +411,13 @@ function saveMascot(mascotId, rarity, species, icon){
 // Teacher-only Exclusivo grant — looks up the student by name + class
 // period and inserts a one-off custom mascot. Returns how many
 // students matched (should normally be 1).
-async function grantExclusiveMascot(studentName, classPeriod, mascotName, mascotIcon){
+async function grantExclusiveMascot(studentName, classPeriod, mascotName, mascotIcon, imageUrl){
   const { data, error } = await sb.rpc('grant_exclusive_mascot', {
     p_student_name: studentName,
     p_class_period: classPeriod || null,
     p_mascot_name: mascotName,
     p_mascot_icon: mascotIcon,
+    p_image_url: imageUrl || null,
   });
   if(error){
     console.error('Failed to grant exclusive mascot:', error);

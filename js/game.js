@@ -268,21 +268,26 @@ const RARITY_WEIGHTS = { comun: 60, especial: 25, raro: 10, legendario: 4, mitic
 const MASCOT_CATALOG = [];
 MASCOT_SPECIES.forEach(sp => {
   RARITY_TIERS.forEach(tier => {
-    MASCOT_CATALOG.push({ id: `${sp.key}_${tier}`, species: sp.name, rarity: tier, icon: sp.icon });
+    MASCOT_CATALOG.push({ id: `${sp.key}_${tier}`, species: sp.name, rarity: tier, icon: sp.icon, image: `assets/mascots/${sp.key}_${tier}.jpg` });
   });
 });
-MASCOT_CATALOG.push({ id: 'alebrije_mitico', species: 'Alebrije', rarity: 'mitico', icon: '🐉' });
+// Four Mítico options (not just one) — so pulling the rarest tier still
+// has real variety instead of always giving the exact same result.
+MASCOT_CATALOG.push({ id: 'alebrije_mitico',          species: 'Alebrije (Jaguar-Coyote)', rarity: 'mitico', icon: '🐉', image: 'assets/mascots/alebrije_mitico.jpg' });
+MASCOT_CATALOG.push({ id: 'alebrije_mitico_quetzal',  species: 'Alebrije (Quetzal-Serpiente)', rarity: 'mitico', icon: '🐉', image: 'assets/mascots/alebrije_mitico_quetzal.jpg' });
+MASCOT_CATALOG.push({ id: 'alebrije_mitico_jaguar',   species: 'Alebrije (Águila-Jaguar)', rarity: 'mitico', icon: '🐉', image: 'assets/mascots/alebrije_mitico_jaguar.jpg' });
+MASCOT_CATALOG.push({ id: 'alebrije_mitico_axolotl',  species: 'Alebrije (Axolote-Mariposa)', rarity: 'mitico', icon: '🐉', image: 'assets/mascots/alebrije_mitico_axolotl.jpg' });
 
 // Small ready-to-go Exclusivo presets for common occasions — teacher can
 // also grant any custom name/icon beyond these via free text.
 const EXCLUSIVO_PRESETS = [
-  { name: 'Alebrije Navideño', icon: '🎄' },
-  { name: 'Alebrije de Primavera', icon: '🌸' },
-  { name: 'Corazón Volador', icon: '💘' },
-  { name: 'Estrella Dorada', icon: '⭐' },
-  { name: 'Calavera de Azúcar', icon: '💀' },
-  { name: 'Fiesta de Herencia Hispana', icon: '💃' },
-  { name: '¡Se Acabaron los Exámenes!', icon: '🥳' },
+  { name: 'Alebrije Navideño', icon: '🎄', image: 'assets/mascots/exclusivo_navideno.jpg' },
+  { name: 'Alebrije de Primavera', icon: '🌸', image: 'assets/mascots/exclusivo_primavera.jpg' },
+  { name: 'Corazón Volador', icon: '💘', image: 'assets/mascots/exclusivo_corazon.jpg' },
+  { name: 'Estrella Dorada', icon: '⭐', image: 'assets/mascots/exclusivo_estrella.jpg' },
+  { name: 'Calavera de Azúcar', icon: '💀', image: 'assets/mascots/exclusivo_calavera.jpg' },
+  { name: 'Fiesta de Herencia Hispana', icon: '💃', image: 'assets/mascots/exclusivo_herencia.jpg' },
+  { name: '¡Se Acabaron los Exámenes!', icon: '🥳', image: 'assets/mascots/exclusivo_examenes.jpg' },
 ];
 
 const MASCOT_PACK_COST = 20;   // coins for a pack (also the egg-hatching cost — same economy)
@@ -290,6 +295,7 @@ const MASCOT_PACK_SIZE = 1;    // one mascot per pack — quality/anticipation o
 const MASCOT_DUPLICATE_REFUND = 3; // coins back if a pull is something already owned
 
 let earnedMascots = new Set(); // mascot_id (or exclusivo's generated id)
+let earnedExclusivos = []; // full rows for Exclusivo grants — not in MASCOT_CATALOG, so kept separately
 
 function pickRandomMascotByWeight(){
   const totalWeight = Object.values(RARITY_WEIGHTS).reduce((a, b) => a + b, 0);
@@ -838,7 +844,7 @@ btnOpenPack.addEventListener('click', () => {
       : (mascot.duplicate ? '' : '');
     el.innerHTML = `
       ${headline ? `<span class="pack-reveal-hatch">${headline}</span>` : ''}
-      ${mascot.icon}
+      <img src="${mascot.image}" alt="${mascot.species}" />
       <span class="pack-reveal-name" style="color:${RARITY_COLORS[mascot.rarity]}">${mascot.species} \u00b7 ${RARITY_LABELS[mascot.rarity]}</span>
       ${mascot.duplicate ? `<span class="pack-reveal-dupe">Duplicate +${MASCOT_DUPLICATE_REFUND}</span>` : ''}
     `;
@@ -883,6 +889,23 @@ function renderCollection(){
   btnOpenPack.innerHTML = earnedMascots.size === 0
     ? `🥚 Hatch Your Egg (${MASCOT_PACK_COST} <span class="coin-icon">●</span>)`
     : `🎁 Open Mystery Pack (${MASCOT_PACK_COST} <span class="coin-icon">●</span>)`;
+
+  const exclusivoSection = document.getElementById('exclusivoSection');
+  const exclusivoGrid = document.getElementById('exclusivoGrid');
+  exclusivoSection.hidden = earnedExclusivos.length === 0;
+  if(earnedExclusivos.length > 0){
+    exclusivoGrid.innerHTML = '';
+    earnedExclusivos.forEach(row => {
+      const el = document.createElement('div');
+      el.className = 'mascot-item';
+      el.style.borderColor = RARITY_COLORS.exclusivo;
+      el.title = row.species;
+      el.innerHTML = row.image_url
+        ? `<img src="${row.image_url}" alt="${row.species}" loading="lazy" />`
+        : `<span style="font-size:2rem;">${row.icon}</span>`;
+      exclusivoGrid.appendChild(el);
+    });
+  }
 }
 
 function buildMascotTile(mascot, isEarned){
@@ -890,7 +913,7 @@ function buildMascotTile(mascot, isEarned){
   el.className = 'mascot-item' + (isEarned ? '' : ' is-locked');
   el.style.borderColor = RARITY_COLORS[mascot.rarity] || 'rgba(255,255,255,0.12)';
   el.title = `${mascot.species} \u00b7 ${RARITY_LABELS[mascot.rarity]}`;
-  el.innerHTML = `${mascot.icon}<span class="mascot-item-rarity" style="color:${RARITY_COLORS[mascot.rarity]}">${RARITY_LABELS[mascot.rarity]}</span>`;
+  el.innerHTML = `<img src="${mascot.image}" alt="${mascot.species}" loading="lazy" /><span class="mascot-item-rarity" style="color:${RARITY_COLORS[mascot.rarity]}">${RARITY_LABELS[mascot.rarity]}</span>`;
   return el;
 }
 
@@ -1291,14 +1314,16 @@ document.getElementById('btnSubmitExclusive').addEventListener('click', async ()
   const classPeriod = exclusiveClassPeriodInput.value.trim();
   if(!studentName) return;
 
-  let mascotName, mascotIcon;
+  let mascotName, mascotIcon, mascotImage;
   if(exclusivePresetSelect.value === 'custom'){
     mascotName = exclusiveCustomNameInput.value.trim();
     mascotIcon = exclusiveCustomIconInput.value.trim();
+    mascotImage = null; // no art for an arbitrary custom name
   } else {
     const preset = EXCLUSIVO_PRESETS[Number(exclusivePresetSelect.value)];
     mascotName = preset.name;
     mascotIcon = preset.icon;
+    mascotImage = preset.image;
   }
   if(!mascotName || !mascotIcon){
     exclusiveFeedback.textContent = 'Enter both a name and an emoji.';
@@ -1306,7 +1331,7 @@ document.getElementById('btnSubmitExclusive').addEventListener('click', async ()
     return;
   }
 
-  const matched = await VocabBackend.grantExclusiveMascot(studentName, classPeriod, mascotName, mascotIcon);
+  const matched = await VocabBackend.grantExclusiveMascot(studentName, classPeriod, mascotName, mascotIcon, mascotImage);
   if(matched > 0){
     exclusiveFeedback.textContent = `Granted ${mascotIcon} ${mascotName} to ${matched === 1 ? studentName : matched + ' matching students'}.`;
     exclusiveFeedback.className = 'typing-feedback correct';
@@ -2305,6 +2330,7 @@ async function hydrateFromBackend(){
 
   const mascots = await VocabBackend.loadMascots();
   earnedMascots = new Set(mascots.map(m => m.mascot_id));
+  earnedExclusivos = mascots.filter(m => m.rarity === 'exclusivo');
 
   updateLevelSelect();
   checkPuzzlePieces();

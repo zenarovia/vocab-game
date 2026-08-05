@@ -1048,15 +1048,22 @@ html,body{
   background:rgba(255,255,255,0.05);
   border:3px solid rgba(255,255,255,0.12);
   border-radius:var(--radius-md);
-  padding:10px 6px;
+  padding:6px;
   text-align:center;
-  font-size:1.5rem;
   position:relative;
+}
+.mascot-item img{
+  width:100%;
+  aspect-ratio:1;
+  object-fit:cover;
+  border-radius:calc(var(--radius-md) - 4px);
+  display:block;
 }
 .mascot-item.is-locked{
   opacity:0.3;
   filter:grayscale(1);
 }
+#exclusivoSection[hidden]{ display:none; }
 .mascot-item-rarity{
   display:block;
   font-size:0.55rem;
@@ -1078,11 +1085,18 @@ html,body{
   background:rgba(255,255,255,0.06);
   border:3px solid rgba(255,255,255,0.15);
   border-radius:var(--radius-md);
-  padding:16px 12px;
+  padding:14px;
   text-align:center;
-  font-size:2rem;
-  min-width:90px;
+  min-width:140px;
+  max-width:180px;
   animation:packReveal 500ms ease;
+}
+.pack-reveal-item img{
+  width:100%;
+  aspect-ratio:1;
+  object-fit:cover;
+  border-radius:calc(var(--radius-md) - 4px);
+  display:block;
 }
 .pack-reveal-name{
   display:block;
