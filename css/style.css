@@ -1003,6 +1003,39 @@ html,body{
   font-size:0.9rem;
 }
 
+/* ---------- Collection: badges + puzzle pieces ---------- */
+.badge-grid, .puzzle-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(80px, 1fr));
+  gap:12px;
+  max-width:420px;
+  margin:0 auto;
+}
+.badge-item, .puzzle-piece{
+  background:rgba(255,255,255,0.05);
+  border:2px solid rgba(255,182,39,0.2);
+  border-radius:var(--radius-md);
+  padding:12px 8px;
+  text-align:center;
+  font-size:1.6rem;
+}
+.badge-item.is-earned, .puzzle-piece.is-earned{
+  border-color:var(--marigold);
+  background:rgba(255,182,39,0.12);
+}
+.badge-item.is-locked, .puzzle-piece.is-locked{
+  opacity:0.35;
+  filter:grayscale(1);
+}
+.badge-item-name{
+  display:block;
+  font-size:0.6rem;
+  font-family:var(--font-body);
+  font-weight:700;
+  color:var(--cream-dim);
+  margin-top:4px;
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce){
   .egg-wobble, .card.is-matched, .card.is-wrong .card-inner{ animation:none !important; }

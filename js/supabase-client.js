@@ -354,6 +354,36 @@ async function setCompetitionPeriod(startDate, endDate, label){
   return true;
 }
 
+// ---- Badges & puzzle pieces (reward economy collectibles) -----------------
+// The catalogs themselves live in game.js (BADGE_CATALOG / PUZZLE_SETS) —
+// these tables just track which ones a given student has actually earned.
+async function loadCollectibles(){
+  if(!currentStudentId) return { badgeIds: [], puzzlePieceIds: [] };
+  const [badgeResult, pieceResult] = await Promise.all([
+    sb.from('student_badges').select('badge_id').eq('student_id', currentStudentId),
+    sb.from('student_puzzle_pieces').select('puzzle_set_id, piece_id').eq('student_id', currentStudentId),
+  ]);
+  if(badgeResult.error) console.error('Failed to load badges:', badgeResult.error);
+  if(pieceResult.error) console.error('Failed to load puzzle pieces:', pieceResult.error);
+  return {
+    badgeIds: (badgeResult.data || []).map(row => row.badge_id),
+    puzzlePieceIds: (pieceResult.data || []).map(row => `${row.puzzle_set_id}:${row.piece_id}`),
+  };
+}
+
+// Fire-and-forget, like the other save functions — awarding a badge/piece
+// a student already has is harmless (the primary key just ignores it).
+function awardBadge(badgeId){
+  if(!currentStudentId) return;
+  sb.from('student_badges').upsert({ student_id: currentStudentId, badge_id: badgeId })
+    .then(({ error }) => { if(error) console.error('Failed to award badge:', error); });
+}
+function awardPuzzlePiece(puzzleSetId, pieceId){
+  if(!currentStudentId) return;
+  sb.from('student_puzzle_pieces').upsert({ student_id: currentStudentId, puzzle_set_id: puzzleSetId, piece_id: pieceId })
+    .then(({ error }) => { if(error) console.error('Failed to award puzzle piece:', error); });
+}
+
 // Logs what the winning class got for a competition period — the app's
 // sanctioned write path, reachable only through the teacher panel.
 async function logCompetitionPrize(periodStart, periodEnd, periodLabel, classPeriod, classLevel, prizeDescription){
@@ -409,4 +439,7 @@ window.VocabBackend = {
   setCompetitionPeriod,
   logCompetitionPrize,
   getPrizeHistory,
+  loadCollectibles,
+  awardBadge,
+  awardPuzzlePiece,
 };

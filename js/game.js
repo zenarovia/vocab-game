@@ -218,6 +218,77 @@ function poolForMode(mode){
   return VOCAB;
 }
 
+// ---- Badges & puzzle pieces (reward economy collectibles) ---------------
+// Badges: frequent, participation-based — easy to earn, checked after
+// every correct answer and every round completion. Emoji-based so no
+// new art assets are needed to ship this.
+const BADGE_CATALOG = [
+  { id: 'first_match',    icon: '🧩', name: 'First Match',     description: 'Complete your first Matching round' },
+  { id: 'first_typed',    icon: '⌨️', name: 'Typing Starter',  description: 'Answer your first Typing question' },
+  { id: 'chatty_10',      icon: '💬', name: 'Getting Started', description: 'Answer 10 questions total' },
+  { id: 'chatty_50',      icon: '🗣️', name: 'Chatterbox',      description: 'Answer 50 questions total' },
+  { id: 'chatty_100',     icon: '📣', name: 'Century Club',    description: 'Answer 100 questions total' },
+  { id: 'streak_5',       icon: '🔥', name: 'On a Roll',       description: 'Get a streak of 5 in a row' },
+  { id: 'streak_10',      icon: '⚡', name: 'Unstoppable',     description: 'Get a streak of 10 in a row' },
+  { id: 'explorer',       icon: '🗺️', name: 'Explorer',        description: 'Try every level in a set at least once' },
+  { id: 'speed_demon',    icon: '🏎️', name: 'Speed Demon',     description: 'Complete a Speed Challenge round' },
+  { id: 'coin_collector', icon: '💰', name: 'Coin Collector',  description: 'Earn 100 coins total' },
+];
+
+// Puzzle pieces: mastery-milestone-based, one per activity (beyond
+// Matching) that a set offers — collecting every piece for a set
+// completes that set's puzzle. Ties directly into the per-set activity
+// configuration, so this automatically adapts to whichever activities
+// a given set actually has.
+const PUZZLE_PIECE_ICONS = { typing: '🌿', listening: '🌴', dictation: '🦋', context: '📝', speed: '⚡', bonus: '🎉', sequence: '🔢' };
+
+let earnedBadges = new Set();
+let earnedPuzzlePieces = new Set(); // stored as "setId:pieceId"
+
+function checkAndAwardBadge(badgeId){
+  if(earnedBadges.has(badgeId)) return;
+  earnedBadges.add(badgeId);
+  VocabBackend.awardBadge(badgeId);
+  const badge = BADGE_CATALOG.find(b => b.id === badgeId);
+  if(badge) showToast(`${badge.icon} ¡Nueva insignia! ${badge.name}`);
+}
+
+function checkAllBadges(){
+  const totalAnswered = Object.values(modeAnsweredCounters).reduce((a, b) => a + b, 0);
+  if(totalAnswered >= 10) checkAndAwardBadge('chatty_10');
+  if(totalAnswered >= 50) checkAndAwardBadge('chatty_50');
+  if(totalAnswered >= 100) checkAndAwardBadge('chatty_100');
+  if(modeAnsweredCounters.typing >= 1) checkAndAwardBadge('first_typed');
+  if(modeAnsweredCounters.speed >= 1) checkAndAwardBadge('speed_demon');
+  if(state.streak >= 5) checkAndAwardBadge('streak_5');
+  if(state.streak >= 10) checkAndAwardBadge('streak_10');
+  if(coins >= 100) checkAndAwardBadge('coin_collector');
+
+  const enabled = getEnabledActivities(activeSetId);
+  const triedEveryLevel = enabled.every(mode =>
+    mode === 'matching' ? getGraduatedWords().length > 0 : modeAnsweredCounters[mode] >= 1
+  );
+  if(triedEveryLevel) checkAndAwardBadge('explorer');
+
+  checkPuzzlePieces();
+}
+
+function checkPuzzlePieces(){
+  const enabled = getEnabledActivities(activeSetId).filter(mode => mode !== 'matching');
+  enabled.forEach(mode => {
+    const key = `${activeSetId}:${mode}`;
+    if(earnedPuzzlePieces.has(key)) return;
+    if(isModeUnlocked(mode)){
+      earnedPuzzlePieces.add(key);
+      VocabBackend.awardPuzzlePiece(activeSetId, mode);
+      showToast(`${PUZZLE_PIECE_ICONS[mode] || '\u2728'} \u00a1Pieza de rompecabezas ganada!`);
+      if(enabled.every(m => earnedPuzzlePieces.has(`${activeSetId}:${m}`))){
+        showToast(`\ud83c\udfc6 \u00a1Rompecabezas completo para ${VOCAB_SETS[activeSetId].name}!`);
+      }
+    }
+  });
+}
+
 // ---- Render vocab as an image, not selectable text --------------------
 // Defeats browser translate extensions and blocks simple copy/paste,
 // per the cheating-prevention design decision.
@@ -370,6 +441,7 @@ function earnCoins(amount){
   coinCounterEl.classList.add('bump');
   setTimeout(()=>coinCounterEl.classList.remove('bump'), 180);
   VocabBackend.saveCoins(coins);
+  checkAllBadges();
 }
 
 // Logs one answer event for the class competition leaderboard — every
@@ -449,6 +521,7 @@ const screens = {
   setup: document.getElementById('screen-setup'),
   leaderboard: document.getElementById('screen-leaderboard'),
   ambient: document.getElementById('screen-ambient'),
+  collection: document.getElementById('screen-collection'),
 };
 const board = document.getElementById('board');
 const typingPanel = document.getElementById('typingPanel');
@@ -647,6 +720,48 @@ document.getElementById('tabOverall').addEventListener('click', async () => {
   document.getElementById('tabLevelBracket').classList.remove('is-active');
   await renderLeaderboard();
 });
+
+// ---- Collection (badges + puzzle pieces) ----------------------------------
+const btnCollection = document.getElementById('btnCollection');
+const btnCloseCollection = document.getElementById('btnCloseCollection');
+const badgeGrid = document.getElementById('badgeGrid');
+const puzzleGrid = document.getElementById('puzzleGrid');
+const puzzleSetLabel = document.getElementById('puzzleSetLabel');
+const puzzleCompleteNote = document.getElementById('puzzleCompleteNote');
+
+btnCollection.addEventListener('click', () => {
+  showScreen('collection');
+  renderCollection();
+});
+btnCloseCollection.addEventListener('click', () => showScreen('start'));
+
+function renderCollection(){
+  badgeGrid.innerHTML = '';
+  BADGE_CATALOG.forEach(badge => {
+    const earned = earnedBadges.has(badge.id);
+    const el = document.createElement('div');
+    el.className = 'badge-item' + (earned ? ' is-earned' : ' is-locked');
+    el.title = badge.description;
+    el.innerHTML = `${badge.icon}<span class="badge-item-name">${badge.name}</span>`;
+    badgeGrid.appendChild(el);
+  });
+
+  const activeSet = VOCAB_SETS[activeSetId];
+  puzzleSetLabel.textContent = `Puzzle: ${activeSet ? activeSet.name : activeSetId}`;
+  const pieces = getEnabledActivities(activeSetId).filter(mode => mode !== 'matching');
+
+  puzzleGrid.innerHTML = '';
+  pieces.forEach(mode => {
+    const earned = earnedPuzzlePieces.has(`${activeSetId}:${mode}`);
+    const el = document.createElement('div');
+    el.className = 'puzzle-piece' + (earned ? ' is-earned' : ' is-locked');
+    el.textContent = PUZZLE_PIECE_ICONS[mode] || '\u2728';
+    puzzleGrid.appendChild(el);
+  });
+
+  const allEarned = pieces.length > 0 && pieces.every(mode => earnedPuzzlePieces.has(`${activeSetId}:${mode}`));
+  puzzleCompleteNote.hidden = !allEarned;
+}
 
 let leaderboardTab = 'level'; // 'level' | 'overall'
 
@@ -1100,10 +1215,11 @@ function showScreen(name){
   // Level bar is the way to choose/re-choose a level — visible except
   // mid-round, first-time setup, or the leaderboard. Set-select follows
   // the same rule.
-  const hideBars = (name === 'game' || name === 'setup' || name === 'leaderboard' || name === 'ambient');
+  const hideBars = (name === 'game' || name === 'setup' || name === 'leaderboard' || name === 'ambient' || name === 'collection');
   levelSelectEl.hidden = hideBars;
   setSelectEl.hidden = hideBars;
-  btnLeaderboard.hidden = (name === 'game' || name === 'setup' || name === 'leaderboard' || name === 'ambient');
+  btnLeaderboard.hidden = hideBars;
+  btnCollection.hidden = hideBars;
   if(name !== 'game' && name !== 'setup'){
     updateLevelSelect();
     updateReviewStatus();
@@ -1335,7 +1451,9 @@ function finishRound(){
     // vocabulary miss, so they intentionally don't produce a "score".
     matchingStat.hidden = false;
     typingStat.hidden = true;
+    checkAndAwardBadge('first_match');
   }
+  checkAllBadges();
 
   const roundCoins = '+' + (state.roundCoinsEarned || 0);
   document.getElementById('coinsEarnedThisSession').textContent = roundCoins;
@@ -1987,7 +2105,12 @@ async function hydrateFromBackend(){
     modeAnsweredCounters[mode] = modeCounts[mode] || 0;
   });
 
+  const collectibles = await VocabBackend.loadCollectibles();
+  earnedBadges = new Set(collectibles.badgeIds);
+  earnedPuzzlePieces = new Set(collectibles.puzzlePieceIds);
+
   updateLevelSelect();
+  checkPuzzlePieces();
 }
 
 initApp();

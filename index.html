@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=46">
+<link rel="stylesheet" href="css/style.css?v=47">
 </head>
 <body>
 
@@ -15,7 +15,7 @@
 
   <!-- Ambient background pattern -->
   <div class="bg-pattern" aria-hidden="true"></div>
-  <div class="build-tag" aria-hidden="true">build 46</div>
+  <div class="build-tag" aria-hidden="true">build 47</div>
   <div class="teacher-override-badge" id="teacherOverrideBadge" hidden>Teacher override active</div>
 
   <!-- Top bar: coin counter + mascot egg. The mascot egg doubles as a
@@ -26,6 +26,7 @@
       <span class="brand-name">Número Nest</span>
     </div>
     <button class="btn-leaderboard" id="btnLeaderboard" type="button" aria-label="Class leaderboard">🏆</button>
+    <button class="btn-leaderboard" id="btnCollection" type="button" aria-label="Badges and puzzle pieces">🎖️</button>
     <div class="coin-counter" id="coinCounter">
       <span class="coin-icon">●</span>
       <span class="coin-value" id="coinValue">0</span>
@@ -337,6 +338,20 @@
     </div>
   </section>
 
+  <!-- COLLECTION: badges (participation) + puzzle pieces (mastery,
+       tied to the current set's activities) -->
+  <section class="screen" id="screen-collection" hidden>
+    <div class="start-card">
+      <h1 class="title">🎖️ My Collection</h1>
+      <p class="subtitle">Badges</p>
+      <div class="badge-grid" id="badgeGrid"></div>
+      <p class="subtitle" style="margin-top: 20px;" id="puzzleSetLabel">Puzzle: Numbers 0-10</p>
+      <div class="puzzle-grid" id="puzzleGrid"></div>
+      <p class="typing-feedback correct" id="puzzleCompleteNote" hidden>🏆 Puzzle complete!</p>
+      <button class="btn-primary" id="btnCloseCollection" type="button" style="margin-top: 20px;">Back</button>
+    </div>
+  </section>
+
   <!-- AMBIENT DISPLAY: meant for a classroom TV/iFP, not an individual
        student's own device — shows who's connected + a live feed of
        recent achievements for the whole class period. -->
@@ -355,6 +370,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase-client.js"></script>
-<script src="js/game.js?v=46"></script>
+<script src="js/game.js?v=47"></script>
 </body>
 </html>
