@@ -377,6 +377,8 @@ const SET_TROPHIES = {
   'numbers-11-20': { name: 'Numbers 11-20 Trophy', image: 'assets/trophies/set_numbers-11-20.jpg' },
   'numbers-tens-10-100':      { name: 'Numbers by Tens Trophy',    image: 'assets/trophies/set_numbers-tens-10-100.jpg' },
   'numbers-hundreds-100-1m':  { name: 'Numbers to a Million Trophy', image: 'assets/trophies/set_numbers-hundreds-100-1m.jpg' },
+  'days-of-week':   { name: 'Days of the Week Trophy',  image: 'assets/trophies/set_days-of-week.jpg' },
+  'months-of-year': { name: 'Months of the Year Trophy', image: 'assets/trophies/set_months-of-year.jpg' },
 };
 const GENERIC_SET_TROPHY_IMAGE = 'assets/trophies/set_generic.jpg';
 
