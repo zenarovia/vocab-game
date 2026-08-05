@@ -280,11 +280,13 @@ const EXCLUSIVO_PRESETS = [
   { name: 'Alebrije de Primavera', icon: '🌸' },
   { name: 'Corazón Volador', icon: '💘' },
   { name: 'Estrella Dorada', icon: '⭐' },
-  { name: 'Fantasma Travieso', icon: '👻' },
+  { name: 'Calavera de Azúcar', icon: '💀' },
+  { name: 'Fiesta de Herencia Hispana', icon: '💃' },
+  { name: '¡Se Acabaron los Exámenes!', icon: '🥳' },
 ];
 
-const MASCOT_PACK_COST = 20;   // coins for a pack
-const MASCOT_PACK_SIZE = 3;    // mascots revealed per pack — a "pack", not a single pull
+const MASCOT_PACK_COST = 20;   // coins for a pack (also the egg-hatching cost — same economy)
+const MASCOT_PACK_SIZE = 1;    // one mascot per pack — quality/anticipation over quantity, per her call
 const MASCOT_DUPLICATE_REFUND = 3; // coins back if a pull is something already owned
 
 let earnedMascots = new Set(); // mascot_id (or exclusivo's generated id)
@@ -821,6 +823,7 @@ btnCollection.addEventListener('click', () => {
 btnCloseCollection.addEventListener('click', () => showScreen('start'));
 
 btnOpenPack.addEventListener('click', () => {
+  const isFirstHatch = earnedMascots.size === 0;
   const results = openMysteryPack();
   if(!results) return;
 
@@ -830,9 +833,13 @@ btnOpenPack.addEventListener('click', () => {
     const el = document.createElement('div');
     el.className = 'pack-reveal-item';
     el.style.borderColor = RARITY_COLORS[mascot.rarity];
+    const headline = isFirstHatch && !mascot.duplicate
+      ? '🥚 ¡Tu huevo eclosionó!'
+      : (mascot.duplicate ? '' : '');
     el.innerHTML = `
+      ${headline ? `<span class="pack-reveal-hatch">${headline}</span>` : ''}
       ${mascot.icon}
-      <span class="pack-reveal-name" style="color:${RARITY_COLORS[mascot.rarity]}">${RARITY_LABELS[mascot.rarity]}</span>
+      <span class="pack-reveal-name" style="color:${RARITY_COLORS[mascot.rarity]}">${mascot.species} \u00b7 ${RARITY_LABELS[mascot.rarity]}</span>
       ${mascot.duplicate ? `<span class="pack-reveal-dupe">Duplicate +${MASCOT_DUPLICATE_REFUND}</span>` : ''}
     `;
     packReveal.appendChild(el);
@@ -873,6 +880,9 @@ function renderCollection(){
     mascotGrid.appendChild(buildMascotTile(mascot, earnedMascots.has(mascot.id)));
   });
   btnOpenPack.disabled = coins < MASCOT_PACK_COST;
+  btnOpenPack.innerHTML = earnedMascots.size === 0
+    ? `🥚 Hatch Your Egg (${MASCOT_PACK_COST} <span class="coin-icon">●</span>)`
+    : `🎁 Open Mystery Pack (${MASCOT_PACK_COST} <span class="coin-icon">●</span>)`;
 }
 
 function buildMascotTile(mascot, isEarned){

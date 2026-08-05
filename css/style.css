@@ -1092,6 +1092,13 @@ html,body{
   color:var(--cream-dim);
   margin-top:6px;
 }
+.pack-reveal-hatch{
+  display:block;
+  font-size:0.7rem;
+  font-weight:800;
+  color:var(--marigold);
+  margin-bottom:6px;
+}
 .pack-reveal-dupe{
   display:block;
   font-size:0.6rem;
