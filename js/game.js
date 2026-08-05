@@ -49,9 +49,21 @@ const VOCAB_SET_2 = [
 // name, and its own word list. Sets are sequential, same as levels — a
 // set only unlocks once the one before it has been fully graduated in
 // Matching. previousSetId is null for the first set (always unlocked).
+// Each set's `activities` list controls which levels apply to it —
+// Matching/Typing/Listening/Dictation/Speed are meant to be standard
+// across every set; Context/Bonus/Sequence are per-set optional, since
+// they don't fit every vocab category equally well (Sequence suits
+// numbers/days/months but not most vocab; Context depends on whether
+// good context sentences/pictures exist for that content).
 const VOCAB_SETS = {
-  'numbers-0-10':  { id: 'numbers-0-10',  name: 'Numbers 0-10',  words: VOCAB_SET_1, order: 0, previousSetId: null },
-  'numbers-11-20': { id: 'numbers-11-20', name: 'Numbers 11-20', words: VOCAB_SET_2, order: 1, previousSetId: 'numbers-0-10' },
+  'numbers-0-10':  {
+    id: 'numbers-0-10', name: 'Numbers 0-10', words: VOCAB_SET_1, order: 0, previousSetId: null,
+    activities: ['matching', 'typing', 'listening', 'dictation', 'context', 'speed', 'bonus', 'sequence'],
+  },
+  'numbers-11-20': {
+    id: 'numbers-11-20', name: 'Numbers 11-20', words: VOCAB_SET_2, order: 1, previousSetId: 'numbers-0-10',
+    activities: ['matching', 'typing', 'listening', 'dictation', 'context', 'speed', 'bonus', 'sequence'],
+  },
 };
 
 let VOCAB = VOCAB_SET_1;
@@ -157,18 +169,16 @@ function pickNextContinuousWord(pool, mode){
 
 // ---- Level unlocking + pool selection (manual level-select) -----------
 // Students now pick which level to play from the always-visible level bar,
-// rather than the system deciding automatically. Strictly sequential:
-// Matching → Typing → Listening → Dictation → Context → Speed → Bonus →
-// Sequence. Each level requires the previous one to be both unlocked AND
-// genuinely practiced (not just unlocked a second ago) before the next
-// one opens up.
+// rather than the system deciding automatically. Strictly sequential,
+// same canonical order for every set — but which activities actually
+// APPLY to a given set is configurable (see VOCAB_SETS[id].activities).
+// Matching, Typing, Listening, Dictation, Speed are the "standard" ones
+// every set is expected to offer; Context, Bonus, and Sequence are
+// per-set optional (e.g. Sequence fits numbers/days/months but not most
+// vocab; Context depends on whether good picture/fact content exists).
+const CANONICAL_ACTIVITY_ORDER = ['matching', 'typing', 'listening', 'dictation', 'context', 'speed', 'bonus', 'sequence'];
 const GRADUATION_THRESHOLD_COUNT = 3; // words needed before Typing unlocks
-let totalTypingAnswered = 0;    // practice done in Typing — gates Listening
-let totalListeningAnswered = 0; // practice done in Listening — gates Dictation
-let totalDictationAnswered = 0; // practice done in Dictation — gates Fill-in-context
-let totalContextAnswered = 0;   // practice done in Context — gates Speed
-let totalSpeedAnswered = 0;     // practice done in Speed — gates Bonus
-let totalBonusAnswered = 0;     // practice done in Bonus — gates Sequence
+const modeAnsweredCounters = { typing: 0, listening: 0, dictation: 0, context: 0, speed: 0, bonus: 0, sequence: 0 };
 
 function masteryScore(number){
   const s = statsFor('matching', number);
@@ -177,17 +187,26 @@ function masteryScore(number){
 function getGraduatedWords(){
   return VOCAB.filter(v => masteryScore(v.number) >= 1);
 }
+
+// Which activities this set actually offers, in canonical order. Falls
+// back to all of them if a set doesn't specify (keeps existing sets
+// working without needing to list every activity explicitly).
+function getEnabledActivities(setId){
+  const set = VOCAB_SETS[setId];
+  const allowed = (set && set.activities) ? set.activities : CANONICAL_ACTIVITY_ORDER;
+  return CANONICAL_ACTIVITY_ORDER.filter(mode => allowed.includes(mode));
+}
+
 function isModeUnlocked(mode){
   if(teacherOverrideActive) return true; // whole-class activity — bypasses individual progress
-  if(mode === 'matching') return true;
-  if(mode === 'typing') return getGraduatedWords().length >= GRADUATION_THRESHOLD_COUNT;
-  if(mode === 'listening') return isModeUnlocked('typing') && totalTypingAnswered >= MIN_TYPING_QUESTIONS;
-  if(mode === 'dictation') return isModeUnlocked('listening') && totalListeningAnswered >= MIN_TYPING_QUESTIONS;
-  if(mode === 'context') return isModeUnlocked('dictation') && totalDictationAnswered >= MIN_TYPING_QUESTIONS;
-  if(mode === 'speed') return isModeUnlocked('context') && totalContextAnswered >= MIN_TYPING_QUESTIONS;
-  if(mode === 'bonus') return isModeUnlocked('speed') && totalSpeedAnswered >= MIN_TYPING_QUESTIONS;
-  if(mode === 'sequence') return isModeUnlocked('bonus') && totalBonusAnswered >= MIN_TYPING_QUESTIONS;
-  return false;
+  const enabled = getEnabledActivities(activeSetId);
+  const idx = enabled.indexOf(mode);
+  if(idx === -1) return false; // this set doesn't offer this activity at all
+  if(idx === 0) return true;   // first enabled activity for this set is always open
+
+  const prevMode = enabled[idx - 1];
+  if(prevMode === 'matching') return getGraduatedWords().length >= GRADUATION_THRESHOLD_COUNT;
+  return isModeUnlocked(prevMode) && modeAnsweredCounters[prevMode] >= MIN_TYPING_QUESTIONS;
 }
 function poolForMode(mode){
   // Every level draws from the full set — the sequential unlock system
@@ -478,7 +497,11 @@ const levelButtons = {
 };
 
 function updateLevelSelect(){
+  const enabled = getEnabledActivities(activeSetId);
   Object.entries(levelButtons).forEach(([mode, btn]) => {
+    const offeredByThisSet = enabled.includes(mode);
+    btn.hidden = !offeredByThisSet;
+    if(!offeredByThisSet) return;
     const unlocked = isModeUnlocked(mode);
     btn.disabled = !unlocked;
     btn.classList.toggle('is-active', state.mode === mode);
@@ -586,12 +609,7 @@ async function switchToSet(setId){
   // Reset in-memory tracking — the backend holds the real per-set
   // history, so this just clears the stale copy before re-hydrating.
   wordStatsByMode = {};
-  totalTypingAnswered = 0;
-  totalListeningAnswered = 0;
-  totalDictationAnswered = 0;
-  totalContextAnswered = 0;
-  totalSpeedAnswered = 0;
-  totalBonusAnswered = 0;
+  Object.keys(modeAnsweredCounters).forEach(mode => { modeAnsweredCounters[mode] = 0; });
   recentContinuousWords.length = 0;
 
   await hydrateFromBackend();
@@ -1373,6 +1391,8 @@ function resolveSequenceRoundComplete(){
   }
 
   state.typingQuestionCount++;
+  modeAnsweredCounters.sequence++;
+  VocabBackend.saveModeCount(activeSetId, 'sequence', modeAnsweredCounters.sequence);
   updateProgress();
 
   setTimeout(() => {
@@ -1418,8 +1438,8 @@ function resolveBonusClick(isCorrect, attributedNumber, wrongFeedbackText){
   }
 
   state.typingQuestionCount++;
-  totalBonusAnswered++;
-  VocabBackend.saveModeCount(activeSetId, 'bonus', totalBonusAnswered);
+  modeAnsweredCounters.bonus++;
+  VocabBackend.saveModeCount(activeSetId, 'bonus', modeAnsweredCounters.bonus);
   updateProgress();
 
   btnTfYes.disabled = true;
@@ -1726,12 +1746,10 @@ function resolveTypingAnswer(rawGiven){
   }
 
   state.typingQuestionCount++;
-  if(state.mode === 'typing'){ totalTypingAnswered++; VocabBackend.saveModeCount(activeSetId, 'typing', totalTypingAnswered); }
-  if(state.mode === 'listening'){ totalListeningAnswered++; VocabBackend.saveModeCount(activeSetId, 'listening', totalListeningAnswered); }
-  if(state.mode === 'dictation'){ totalDictationAnswered++; VocabBackend.saveModeCount(activeSetId, 'dictation', totalDictationAnswered); }
-  if(state.mode === 'context'){ totalContextAnswered++; VocabBackend.saveModeCount(activeSetId, 'context', totalContextAnswered); }
-  if(state.mode === 'speed'){ totalSpeedAnswered++; VocabBackend.saveModeCount(activeSetId, 'speed', totalSpeedAnswered); }
-  if(state.mode === 'bonus'){ totalBonusAnswered++; VocabBackend.saveModeCount(activeSetId, 'bonus', totalBonusAnswered); }
+  if(modeAnsweredCounters[state.mode] !== undefined){
+    modeAnsweredCounters[state.mode]++;
+    VocabBackend.saveModeCount(activeSetId, state.mode, modeAnsweredCounters[state.mode]);
+  }
   updateProgress();
   typingInput.disabled = true;
 
@@ -1802,12 +1820,9 @@ async function hydrateFromBackend(){
   coinValueEl.textContent = coins;
 
   const modeCounts = progress.modeCounts || {};
-  totalTypingAnswered = modeCounts.typing || 0;
-  totalListeningAnswered = modeCounts.listening || 0;
-  totalDictationAnswered = modeCounts.dictation || 0;
-  totalContextAnswered = modeCounts.context || 0;
-  totalSpeedAnswered = modeCounts.speed || 0;
-  totalBonusAnswered = modeCounts.bonus || 0;
+  Object.keys(modeAnsweredCounters).forEach(mode => {
+    modeAnsweredCounters[mode] = modeCounts[mode] || 0;
+  });
 
   updateLevelSelect();
 }

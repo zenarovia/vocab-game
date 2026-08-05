@@ -404,6 +404,7 @@ html,body{
   cursor:pointer;
   transition:transform 100ms ease, border-color 150ms ease, background 150ms ease;
 }
+.level-btn[hidden]{ display:none; }
 .level-btn:hover:not(:disabled){
   border-color:var(--axolotl-pink);
   transform:translateY(-2px);
