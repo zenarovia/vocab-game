@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=38">
+<link rel="stylesheet" href="css/style.css?v=39">
 </head>
 <body>
 
@@ -15,7 +15,7 @@
 
   <!-- Ambient background pattern -->
   <div class="bg-pattern" aria-hidden="true"></div>
-  <div class="build-tag" aria-hidden="true">build 38</div>
+  <div class="build-tag" aria-hidden="true">build 39</div>
   <div class="teacher-override-badge" id="teacherOverrideBadge" hidden>Teacher override active</div>
 
   <!-- Top bar: coin counter + mascot egg. The mascot egg doubles as a
@@ -51,8 +51,20 @@
       <div id="teacherActiveStep" hidden>
         <p class="subtitle">Every level is unlocked for this session. Pick one to jump straight into it for a class activity.</p>
         <div class="teacher-panel-buttons">
+          <button class="btn-primary btn-small" id="btnOpenDashboard" type="button">View Class Dashboard</button>
           <button class="set-option" id="btnTeacherOff" type="button">Turn off override</button>
           <button class="set-option" id="btnTeacherClose" type="button">Close</button>
+        </div>
+      </div>
+      <div id="teacherDashboardStep" hidden>
+        <p class="subtitle">Enter a class period to see today's status.</p>
+        <input type="text" id="dashboardClassPeriodInput" class="typing-input" placeholder="Class period (e.g. Period 3)" autocomplete="off" />
+        <div class="teacher-panel-buttons">
+          <button class="btn-primary btn-small" id="btnLoadDashboard" type="button">Load</button>
+        </div>
+        <div class="dashboard-list" id="dashboardList"></div>
+        <div class="teacher-panel-buttons">
+          <button class="set-option" id="btnDashboardBack" type="button">Back</button>
         </div>
       </div>
     </div>
@@ -261,6 +273,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase-client.js"></script>
-<script src="js/game.js?v=38"></script>
+<script src="js/game.js?v=39"></script>
 </body>
 </html>

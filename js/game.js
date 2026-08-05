@@ -671,9 +671,11 @@ function openTeacherOverlay(){
   if(teacherOverrideActive){
     teacherPasscodeStep.hidden = true;
     teacherActiveStep.hidden = false;
+    teacherDashboardStep.hidden = true;
   } else {
     teacherPasscodeStep.hidden = false;
     teacherActiveStep.hidden = true;
+    teacherDashboardStep.hidden = true;
     teacherPasscodeInput.value = '';
     teacherPasscodeError.textContent = '';
   }
@@ -702,6 +704,48 @@ document.getElementById('btnTeacherOff').addEventListener('click', () => {
   updateLevelSelect();
   renderSetSelect();
   closeTeacherOverlay();
+});
+
+// ---- Teacher dashboard (part of the same passcode-gated panel) -----------
+const teacherDashboardStep = document.getElementById('teacherDashboardStep');
+const dashboardClassPeriodInput = document.getElementById('dashboardClassPeriodInput');
+const dashboardList = document.getElementById('dashboardList');
+
+document.getElementById('btnOpenDashboard').addEventListener('click', async () => {
+  teacherActiveStep.hidden = true;
+  teacherDashboardStep.hidden = false;
+  const profile = await VocabBackend.getStudentProfile();
+  if(profile && profile.class_period && !dashboardClassPeriodInput.value){
+    dashboardClassPeriodInput.value = profile.class_period;
+  }
+});
+document.getElementById('btnDashboardBack').addEventListener('click', () => {
+  teacherDashboardStep.hidden = true;
+  teacherActiveStep.hidden = false;
+});
+document.getElementById('btnLoadDashboard').addEventListener('click', async () => {
+  const classPeriod = dashboardClassPeriodInput.value.trim();
+  if(!classPeriod) return;
+  dashboardList.innerHTML = '<p class="leaderboard-empty">Loading...</p>';
+  const rows = await VocabBackend.getClassStatus(classPeriod);
+
+  if(rows.length === 0){
+    dashboardList.innerHTML = '<p class="leaderboard-empty">No students found for that class period.</p>';
+    return;
+  }
+
+  dashboardList.innerHTML = '';
+  rows.forEach(row => {
+    const el = document.createElement('div');
+    el.className = 'dashboard-row' + (row.is_struggling ? ' is-struggling' : '');
+    const connectedText = row.connected_today ? 'Connected today' : 'Not connected today';
+    el.innerHTML = `
+      <span class="dashboard-name">${row.student_name}</span>
+      <span class="dashboard-detail">${connectedText} &middot; ${row.participation_today} today &middot; ${row.accuracy_today ?? '—'}% acc.</span>
+      ${row.is_struggling ? '<span class="dashboard-flag">Flag</span>' : ''}
+    `;
+    dashboardList.appendChild(el);
+  });
 });
 
 function showScreen(name){

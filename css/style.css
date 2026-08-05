@@ -144,6 +144,46 @@ html,body{
 }
 .teacher-override-badge[hidden]{ display:none; }
 
+.dashboard-list{
+  max-height:280px;
+  overflow-y:auto;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin:14px 0;
+}
+.dashboard-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  background:rgba(255,255,255,0.05);
+  border:1px solid rgba(255,182,39,0.2);
+  border-radius:12px;
+  padding:10px 14px;
+  text-align:left;
+}
+.dashboard-row.is-struggling{
+  border-color:var(--coral);
+  background:rgba(255,107,94,0.12);
+}
+.dashboard-name{
+  font-family:var(--font-display);
+  font-weight:700;
+  font-size:0.9rem;
+  color:var(--cream);
+  flex:1;
+}
+.dashboard-detail{
+  font-size:0.72rem;
+  color:var(--cream-dim);
+}
+.dashboard-flag{
+  font-size:0.68rem;
+  font-weight:700;
+  text-transform:uppercase;
+  color:var(--coral);
+}
+
 .coin-counter{
   display:flex; align-items:center; gap:8px;
   background:rgba(255,255,255,0.06);

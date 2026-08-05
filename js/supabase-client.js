@@ -247,6 +247,19 @@ async function getClassLeaderboard(){
   return data || [];
 }
 
+// Fetches per-student status for a class period — connected today,
+// participation/mastery today, and a struggling flag. Powers the
+// teacher-facing dashboard (passcode-gated in the app, not a real
+// authenticated teacher role yet).
+async function getClassStatus(classPeriod){
+  const { data, error } = await sb.rpc('get_class_status', { p_class_period: classPeriod });
+  if(error){
+    console.error('Failed to load class status:', error);
+    return [];
+  }
+  return data || [];
+}
+
 window.VocabBackend = {
   DEFAULT_SET_ID,
   ensureSignedIn,
@@ -260,4 +273,5 @@ window.VocabBackend = {
   getAssignedSetForClassPeriod,
   logActivity,
   getClassLeaderboard,
+  getClassStatus,
 };
