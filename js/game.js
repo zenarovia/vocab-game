@@ -834,7 +834,7 @@ btnOpenPack.addEventListener('click', () => {
     el.className = 'pack-reveal-item';
     el.style.borderColor = RARITY_COLORS[mascot.rarity];
     const headline = isFirstHatch && !mascot.duplicate
-      ? '🥚 ¡Tu huevo eclosionó!'
+      ? '🥚 ¡Abriste tu huevo!'
       : (mascot.duplicate ? '' : '');
     el.innerHTML = `
       ${headline ? `<span class="pack-reveal-hatch">${headline}</span>` : ''}
