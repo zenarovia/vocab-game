@@ -965,8 +965,11 @@ async function renderLeaderboard(){
 
     const el = document.createElement('div');
     el.className = 'leaderboard-row' + (i === 0 ? ' is-first' : '') + (isMine ? ' is-mine' : '');
+    const trophyImg = i === 0
+      ? `<img class="leaderboard-trophy" src="assets/trophies/${leaderboardTab === 'overall' ? 'trophy_overall.jpg' : 'trophy_level.jpg'}" alt="Trophy" />`
+      : `<span class="leaderboard-rank">#${i + 1}</span>`;
     el.innerHTML = `
-      <span class="leaderboard-rank">#${i + 1}</span>
+      ${trophyImg}
       <span class="leaderboard-info">
         <span class="leaderboard-class">${displayName}${isMine ? ' (you)' : ''}</span><br>
         <span class="leaderboard-detail">${detail}</span>

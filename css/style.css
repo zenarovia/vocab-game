@@ -982,6 +982,12 @@ html,body{
   color:var(--marigold);
   min-width:28px;
 }
+.leaderboard-trophy{
+  width:36px;
+  height:36px;
+  object-fit:contain;
+  flex-shrink:0;
+}
 .leaderboard-info{ flex:1; }
 .leaderboard-class{
   font-family:var(--font-display);
