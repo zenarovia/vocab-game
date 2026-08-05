@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=47">
+<link rel="stylesheet" href="css/style.css?v=48">
 </head>
 <body>
 
@@ -15,7 +15,7 @@
 
   <!-- Ambient background pattern -->
   <div class="bg-pattern" aria-hidden="true"></div>
-  <div class="build-tag" aria-hidden="true">build 47</div>
+  <div class="build-tag" aria-hidden="true">build 48</div>
   <div class="teacher-override-badge" id="teacherOverrideBadge" hidden>Teacher override active</div>
 
   <!-- Top bar: coin counter + mascot egg. The mascot egg doubles as a
@@ -57,6 +57,7 @@
           <button class="set-option" id="btnOpenGrading" type="button">Grading Report</button>
           <button class="set-option" id="btnOpenPeriod" type="button">Competition Period</button>
           <button class="set-option" id="btnOpenPrize" type="button">Log Prize</button>
+          <button class="set-option" id="btnOpenExclusive" type="button">Grant Exclusive Mascot</button>
           <button class="set-option" id="btnTeacherOff" type="button">Turn off override</button>
           <button class="set-option" id="btnTeacherClose" type="button">Close</button>
         </div>
@@ -119,6 +120,21 @@
         <div class="dashboard-list" id="prizeHistoryList"></div>
         <div class="teacher-panel-buttons">
           <button class="set-option" id="btnPrizeBack" type="button">Back</button>
+        </div>
+      </div>
+      <div id="teacherExclusiveStep" hidden>
+        <p class="subtitle">Grant a one-off Exclusivo mascot — not earnable via mystery packs, for a special occasion.</p>
+        <input type="text" id="exclusiveStudentInput" class="typing-input" placeholder="Student's name (exactly as they entered it)" autocomplete="off" />
+        <input type="text" id="exclusiveClassPeriodInput" class="typing-input" placeholder="Class period (optional, narrows the match)" autocomplete="off" style="margin-top: 10px;" />
+        <select id="exclusivePresetSelect" class="typing-input" style="margin-top: 10px;">
+          <option value="custom">Custom (type your own below)</option>
+        </select>
+        <input type="text" id="exclusiveCustomNameInput" class="typing-input" placeholder="Custom name (e.g. Alebrije de Otoño)" autocomplete="off" style="margin-top: 10px;" />
+        <input type="text" id="exclusiveCustomIconInput" class="typing-input" placeholder="Emoji (e.g. 🍂)" autocomplete="off" style="margin-top: 10px;" maxlength="4" />
+        <p class="typing-feedback" id="exclusiveFeedback"></p>
+        <div class="teacher-panel-buttons">
+          <button class="btn-primary btn-small" id="btnSubmitExclusive" type="button">Grant Mascot</button>
+          <button class="set-option" id="btnExclusiveBack" type="button">Back</button>
         </div>
       </div>
     </div>
@@ -348,6 +364,14 @@
       <p class="subtitle" style="margin-top: 20px;" id="puzzleSetLabel">Puzzle: Numbers 0-10</p>
       <div class="puzzle-grid" id="puzzleGrid"></div>
       <p class="typing-feedback correct" id="puzzleCompleteNote" hidden>🏆 Puzzle complete!</p>
+
+      <p class="subtitle" style="margin-top: 20px;">Mascots</p>
+      <div class="mascot-grid" id="mascotGrid"></div>
+      <button class="btn-primary btn-small" id="btnOpenPack" type="button" style="margin-top: 14px;">
+        Open Mystery Pack (20 <span class="coin-icon">●</span>)
+      </button>
+      <div class="pack-reveal" id="packReveal" hidden></div>
+
       <button class="btn-primary" id="btnCloseCollection" type="button" style="margin-top: 20px;">Back</button>
     </div>
   </section>
@@ -370,6 +394,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase-client.js"></script>
-<script src="js/game.js?v=47"></script>
+<script src="js/game.js?v=48"></script>
 </body>
 </html>

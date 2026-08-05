@@ -242,6 +242,88 @@ const BADGE_CATALOG = [
 // a given set actually has.
 const PUZZLE_PIECE_ICONS = { typing: '🌿', listening: '🌴', dictation: '🦋', context: '📝', speed: '⚡', bonus: '🎉', sequence: '🔢' };
 
+// ---- Mascot skins & mystery packs -----------------------------------------
+// Roster is expandable (more species can just be added to this list) —
+// each species comes in 4 standard rarities, plus one special Mítico
+// alebrije-style hybrid not tied to any single species. Emoji-based, so
+// no custom art is needed to ship this; rarity is visually distinguished
+// by border/background color on the collection grid instead.
+const MASCOT_SPECIES = [
+  { key: 'axolotl',  name: 'Axolote',          icon: '🦎' },
+  { key: 'coqui',    name: 'Coquí',            icon: '🐸' },
+  { key: 'sloth',    name: 'Perezoso',         icon: '🦥' },
+  { key: 'quetzal',  name: 'Quetzal',          icon: '🦜' },
+  { key: 'jaguar',   name: 'Jaguar',           icon: '🐆' },
+  { key: 'capibara', name: 'Capibara',         icon: '🦫' },
+  { key: 'iguana',   name: 'Iguana',           icon: '🐊' },
+  { key: 'monarca',  name: 'Mariposa Monarca', icon: '🦋' },
+];
+
+const RARITY_TIERS = ['comun', 'especial', 'raro', 'legendario'];
+const RARITY_LABELS = { comun: 'Común', especial: 'Especial', raro: 'Raro', legendario: 'Legendario', mitico: 'Mítico', exclusivo: 'Exclusivo' };
+const RARITY_COLORS = { comun: '#9CA3AF', especial: '#2EC4B6', raro: '#4D9DE0', legendario: '#A855F7', mitico: '#FFB627', exclusivo: '#FF7DAC' };
+// Weighted toward common — mítico is a genuine rare pull, not routine.
+const RARITY_WEIGHTS = { comun: 60, especial: 25, raro: 10, legendario: 4, mitico: 1 };
+
+const MASCOT_CATALOG = [];
+MASCOT_SPECIES.forEach(sp => {
+  RARITY_TIERS.forEach(tier => {
+    MASCOT_CATALOG.push({ id: `${sp.key}_${tier}`, species: sp.name, rarity: tier, icon: sp.icon });
+  });
+});
+MASCOT_CATALOG.push({ id: 'alebrije_mitico', species: 'Alebrije', rarity: 'mitico', icon: '🐉' });
+
+// Small ready-to-go Exclusivo presets for common occasions — teacher can
+// also grant any custom name/icon beyond these via free text.
+const EXCLUSIVO_PRESETS = [
+  { name: 'Alebrije Navideño', icon: '🎄' },
+  { name: 'Alebrije de Primavera', icon: '🌸' },
+  { name: 'Corazón Volador', icon: '💘' },
+  { name: 'Estrella Dorada', icon: '⭐' },
+  { name: 'Fantasma Travieso', icon: '👻' },
+];
+
+const MASCOT_PACK_COST = 20;   // coins for a pack
+const MASCOT_PACK_SIZE = 3;    // mascots revealed per pack — a "pack", not a single pull
+const MASCOT_DUPLICATE_REFUND = 3; // coins back if a pull is something already owned
+
+let earnedMascots = new Set(); // mascot_id (or exclusivo's generated id)
+
+function pickRandomMascotByWeight(){
+  const totalWeight = Object.values(RARITY_WEIGHTS).reduce((a, b) => a + b, 0);
+  const roll = Math.random() * totalWeight;
+  let cumulative = 0;
+  let chosenRarity = 'comun';
+  for(const tier of Object.keys(RARITY_WEIGHTS)){
+    cumulative += RARITY_WEIGHTS[tier];
+    if(roll <= cumulative){ chosenRarity = tier; break; }
+  }
+  const candidates = MASCOT_CATALOG.filter(m => m.rarity === chosenRarity);
+  return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
+function openMysteryPack(){
+  if(coins < MASCOT_PACK_COST) return null;
+  coins -= MASCOT_PACK_COST;
+  VocabBackend.saveCoins(coins);
+
+  const results = [];
+  for(let i = 0; i < MASCOT_PACK_SIZE; i++){
+    const picked = pickRandomMascotByWeight();
+    const isDuplicate = earnedMascots.has(picked.id);
+    if(isDuplicate){
+      coins += MASCOT_DUPLICATE_REFUND;
+      VocabBackend.saveCoins(coins);
+    } else {
+      earnedMascots.add(picked.id);
+      VocabBackend.saveMascot(picked.id, picked.rarity, picked.species, picked.icon);
+    }
+    results.push({ ...picked, duplicate: isDuplicate });
+  }
+  coinValueEl.textContent = coins;
+  return results;
+}
+
 let earnedBadges = new Set();
 let earnedPuzzlePieces = new Set(); // stored as "setId:pieceId"
 
@@ -728,12 +810,36 @@ const badgeGrid = document.getElementById('badgeGrid');
 const puzzleGrid = document.getElementById('puzzleGrid');
 const puzzleSetLabel = document.getElementById('puzzleSetLabel');
 const puzzleCompleteNote = document.getElementById('puzzleCompleteNote');
+const mascotGrid = document.getElementById('mascotGrid');
+const btnOpenPack = document.getElementById('btnOpenPack');
+const packReveal = document.getElementById('packReveal');
 
 btnCollection.addEventListener('click', () => {
   showScreen('collection');
   renderCollection();
 });
 btnCloseCollection.addEventListener('click', () => showScreen('start'));
+
+btnOpenPack.addEventListener('click', () => {
+  const results = openMysteryPack();
+  if(!results) return;
+
+  packReveal.innerHTML = '';
+  packReveal.hidden = false;
+  results.forEach(mascot => {
+    const el = document.createElement('div');
+    el.className = 'pack-reveal-item';
+    el.style.borderColor = RARITY_COLORS[mascot.rarity];
+    el.innerHTML = `
+      ${mascot.icon}
+      <span class="pack-reveal-name" style="color:${RARITY_COLORS[mascot.rarity]}">${RARITY_LABELS[mascot.rarity]}</span>
+      ${mascot.duplicate ? `<span class="pack-reveal-dupe">Duplicate +${MASCOT_DUPLICATE_REFUND}</span>` : ''}
+    `;
+    packReveal.appendChild(el);
+  });
+
+  renderCollection();
+});
 
 function renderCollection(){
   badgeGrid.innerHTML = '';
@@ -761,6 +867,21 @@ function renderCollection(){
 
   const allEarned = pieces.length > 0 && pieces.every(mode => earnedPuzzlePieces.has(`${activeSetId}:${mode}`));
   puzzleCompleteNote.hidden = !allEarned;
+
+  mascotGrid.innerHTML = '';
+  MASCOT_CATALOG.forEach(mascot => {
+    mascotGrid.appendChild(buildMascotTile(mascot, earnedMascots.has(mascot.id)));
+  });
+  btnOpenPack.disabled = coins < MASCOT_PACK_COST;
+}
+
+function buildMascotTile(mascot, isEarned){
+  const el = document.createElement('div');
+  el.className = 'mascot-item' + (isEarned ? '' : ' is-locked');
+  el.style.borderColor = RARITY_COLORS[mascot.rarity] || 'rgba(255,255,255,0.12)';
+  el.title = `${mascot.species} \u00b7 ${RARITY_LABELS[mascot.rarity]}`;
+  el.innerHTML = `${mascot.icon}<span class="mascot-item-rarity" style="color:${RARITY_COLORS[mascot.rarity]}">${RARITY_LABELS[mascot.rarity]}</span>`;
+  return el;
 }
 
 let leaderboardTab = 'level'; // 'level' | 'overall'
@@ -861,6 +982,7 @@ function openTeacherOverlay(){
     teacherGradingStep.hidden = true;
     teacherPeriodStep.hidden = true;
     teacherPrizeStep.hidden = true;
+    teacherExclusiveStep.hidden = true;
   } else {
     teacherPasscodeStep.hidden = false;
     teacherActiveStep.hidden = true;
@@ -869,6 +991,7 @@ function openTeacherOverlay(){
     teacherGradingStep.hidden = true;
     teacherPeriodStep.hidden = true;
     teacherPrizeStep.hidden = true;
+    teacherExclusiveStep.hidden = true;
     teacherPasscodeInput.value = '';
     teacherPasscodeError.textContent = '';
   }
@@ -1119,6 +1242,67 @@ document.getElementById('btnSubmitPrize').addEventListener('click', async () => 
   if(ok){
     prizeDescriptionInput.value = '';
     await renderPrizeHistory();
+  }
+});
+
+// ---- Grant Exclusive Mascot (same passcode-gated panel) -------------------
+const teacherExclusiveStep = document.getElementById('teacherExclusiveStep');
+const exclusiveStudentInput = document.getElementById('exclusiveStudentInput');
+const exclusiveClassPeriodInput = document.getElementById('exclusiveClassPeriodInput');
+const exclusivePresetSelect = document.getElementById('exclusivePresetSelect');
+const exclusiveCustomNameInput = document.getElementById('exclusiveCustomNameInput');
+const exclusiveCustomIconInput = document.getElementById('exclusiveCustomIconInput');
+const exclusiveFeedback = document.getElementById('exclusiveFeedback');
+
+EXCLUSIVO_PRESETS.forEach((preset, i) => {
+  const opt = document.createElement('option');
+  opt.value = String(i);
+  opt.textContent = `${preset.icon} ${preset.name}`;
+  exclusivePresetSelect.appendChild(opt);
+});
+
+document.getElementById('btnOpenExclusive').addEventListener('click', () => {
+  teacherActiveStep.hidden = true;
+  teacherExclusiveStep.hidden = false;
+  exclusiveFeedback.textContent = '';
+  exclusiveFeedback.className = 'typing-feedback';
+});
+document.getElementById('btnExclusiveBack').addEventListener('click', () => {
+  teacherExclusiveStep.hidden = true;
+  teacherActiveStep.hidden = false;
+});
+exclusivePresetSelect.addEventListener('change', () => {
+  const isCustom = exclusivePresetSelect.value === 'custom';
+  exclusiveCustomNameInput.hidden = !isCustom;
+  exclusiveCustomIconInput.hidden = !isCustom;
+});
+document.getElementById('btnSubmitExclusive').addEventListener('click', async () => {
+  const studentName = exclusiveStudentInput.value.trim();
+  const classPeriod = exclusiveClassPeriodInput.value.trim();
+  if(!studentName) return;
+
+  let mascotName, mascotIcon;
+  if(exclusivePresetSelect.value === 'custom'){
+    mascotName = exclusiveCustomNameInput.value.trim();
+    mascotIcon = exclusiveCustomIconInput.value.trim();
+  } else {
+    const preset = EXCLUSIVO_PRESETS[Number(exclusivePresetSelect.value)];
+    mascotName = preset.name;
+    mascotIcon = preset.icon;
+  }
+  if(!mascotName || !mascotIcon){
+    exclusiveFeedback.textContent = 'Enter both a name and an emoji.';
+    exclusiveFeedback.className = 'typing-feedback wrong';
+    return;
+  }
+
+  const matched = await VocabBackend.grantExclusiveMascot(studentName, classPeriod, mascotName, mascotIcon);
+  if(matched > 0){
+    exclusiveFeedback.textContent = `Granted ${mascotIcon} ${mascotName} to ${matched === 1 ? studentName : matched + ' matching students'}.`;
+    exclusiveFeedback.className = 'typing-feedback correct';
+  } else {
+    exclusiveFeedback.textContent = 'No matching student found — check the name/class period.';
+    exclusiveFeedback.className = 'typing-feedback wrong';
   }
 });
 
@@ -2108,6 +2292,9 @@ async function hydrateFromBackend(){
   const collectibles = await VocabBackend.loadCollectibles();
   earnedBadges = new Set(collectibles.badgeIds);
   earnedPuzzlePieces = new Set(collectibles.puzzlePieceIds);
+
+  const mascots = await VocabBackend.loadMascots();
+  earnedMascots = new Set(mascots.map(m => m.mascot_id));
 
   updateLevelSelect();
   checkPuzzlePieces();

@@ -384,6 +384,47 @@ function awardPuzzlePiece(puzzleSetId, pieceId){
     .then(({ error }) => { if(error) console.error('Failed to award puzzle piece:', error); });
 }
 
+// ---- Mascot collection (mystery packs + Exclusivo) -------------------------
+async function loadMascots(){
+  if(!currentStudentId) return [];
+  const { data, error } = await sb
+    .from('student_mascots')
+    .select('mascot_id, rarity, species, icon')
+    .eq('student_id', currentStudentId);
+  if(error){
+    console.error('Failed to load mascots:', error);
+    return [];
+  }
+  return data || [];
+}
+
+// Awards one mascot from a mystery-pack pull — self-service, same trust
+// level as everything else a student can already do (spend coins,
+// client picks the random result, writes it directly).
+function saveMascot(mascotId, rarity, species, icon){
+  if(!currentStudentId) return;
+  sb.from('student_mascots').upsert({
+    student_id: currentStudentId, mascot_id: mascotId, rarity, species, icon,
+  }).then(({ error }) => { if(error) console.error('Failed to save mascot:', error); });
+}
+
+// Teacher-only Exclusivo grant — looks up the student by name + class
+// period and inserts a one-off custom mascot. Returns how many
+// students matched (should normally be 1).
+async function grantExclusiveMascot(studentName, classPeriod, mascotName, mascotIcon){
+  const { data, error } = await sb.rpc('grant_exclusive_mascot', {
+    p_student_name: studentName,
+    p_class_period: classPeriod || null,
+    p_mascot_name: mascotName,
+    p_mascot_icon: mascotIcon,
+  });
+  if(error){
+    console.error('Failed to grant exclusive mascot:', error);
+    return 0;
+  }
+  return data;
+}
+
 // Logs what the winning class got for a competition period — the app's
 // sanctioned write path, reachable only through the teacher panel.
 async function logCompetitionPrize(periodStart, periodEnd, periodLabel, classPeriod, classLevel, prizeDescription){
@@ -442,4 +483,7 @@ window.VocabBackend = {
   loadCollectibles,
   awardBadge,
   awardPuzzlePiece,
+  loadMascots,
+  saveMascot,
+  grantExclusiveMascot,
 };
