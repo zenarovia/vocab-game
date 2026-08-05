@@ -354,6 +354,39 @@ async function setCompetitionPeriod(startDate, endDate, label){
   return true;
 }
 
+// Logs what the winning class got for a competition period — the app's
+// sanctioned write path, reachable only through the teacher panel.
+async function logCompetitionPrize(periodStart, periodEnd, periodLabel, classPeriod, classLevel, prizeDescription){
+  const { error } = await sb.rpc('log_competition_prize', {
+    p_period_start: periodStart,
+    p_period_end: periodEnd,
+    p_period_label: periodLabel || null,
+    p_class_period: classPeriod,
+    p_class_level: classLevel || null,
+    p_prize_description: prizeDescription,
+  });
+  if(error){
+    console.error('Failed to log prize:', error);
+    return false;
+  }
+  return true;
+}
+
+// Fetches recent prize history, newest first — powers both the teacher
+// panel's history list and the student-facing "recent winner" banner.
+async function getPrizeHistory(limit){
+  const { data, error } = await sb
+    .from('competition_prizes')
+    .select('period_start, period_end, period_label, class_period, class_level, prize_description, logged_at')
+    .order('logged_at', { ascending: false })
+    .limit(limit || 10);
+  if(error){
+    console.error('Failed to load prize history:', error);
+    return [];
+  }
+  return data || [];
+}
+
 window.VocabBackend = {
   DEFAULT_SET_ID,
   ensureSignedIn,
@@ -374,4 +407,6 @@ window.VocabBackend = {
   getGradingReport,
   getCompetitionPeriod,
   setCompetitionPeriod,
+  logCompetitionPrize,
+  getPrizeHistory,
 };

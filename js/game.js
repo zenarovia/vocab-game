@@ -745,6 +745,7 @@ function openTeacherOverlay(){
     teacherAssignStep.hidden = true;
     teacherGradingStep.hidden = true;
     teacherPeriodStep.hidden = true;
+    teacherPrizeStep.hidden = true;
   } else {
     teacherPasscodeStep.hidden = false;
     teacherActiveStep.hidden = true;
@@ -752,6 +753,7 @@ function openTeacherOverlay(){
     teacherAssignStep.hidden = true;
     teacherGradingStep.hidden = true;
     teacherPeriodStep.hidden = true;
+    teacherPrizeStep.hidden = true;
     teacherPasscodeInput.value = '';
     teacherPasscodeError.textContent = '';
   }
@@ -935,6 +937,73 @@ document.getElementById('btnSubmitPeriod').addEventListener('click', async () =>
   periodFeedback.className = ok ? 'typing-feedback correct' : 'typing-feedback wrong';
   if(ok){
     currentPeriodLabel.textContent = `Currently: ${label || 'Custom range'} (${start} to ${end})`;
+  }
+});
+
+// ---- Prize tracking (same passcode-gated panel) ---------------------------
+const teacherPrizeStep = document.getElementById('teacherPrizeStep');
+const prizeWinnerSuggestion = document.getElementById('prizeWinnerSuggestion');
+const prizeClassPeriodInput = document.getElementById('prizeClassPeriodInput');
+const prizeDescriptionInput = document.getElementById('prizeDescriptionInput');
+const prizeFeedback = document.getElementById('prizeFeedback');
+const prizeHistoryList = document.getElementById('prizeHistoryList');
+
+async function renderPrizeHistory(){
+  const history = await VocabBackend.getPrizeHistory(10);
+  if(history.length === 0){
+    prizeHistoryList.innerHTML = '<p class="leaderboard-empty">No prizes logged yet.</p>';
+    return;
+  }
+  prizeHistoryList.innerHTML = '';
+  history.forEach(row => {
+    const el = document.createElement('div');
+    el.className = 'dashboard-row';
+    el.innerHTML = `
+      <span class="dashboard-name">${row.class_period}</span>
+      <span class="dashboard-detail">${row.period_label || row.period_start + ' to ' + row.period_end} &middot; ${row.prize_description}</span>
+    `;
+    prizeHistoryList.appendChild(el);
+  });
+}
+
+document.getElementById('btnOpenPrize').addEventListener('click', async () => {
+  teacherActiveStep.hidden = true;
+  teacherPrizeStep.hidden = false;
+  prizeFeedback.textContent = '';
+  prizeFeedback.className = 'typing-feedback';
+
+  const standings = await VocabBackend.getClassLeaderboard();
+  if(standings.length > 0){
+    prizeWinnerSuggestion.textContent = `This period's leader: ${standings[0].class_period} (${Math.round(standings[0].combined_score)} pts). Log a prize below.`;
+    if(!prizeClassPeriodInput.value) prizeClassPeriodInput.value = standings[0].class_period;
+  }
+  await renderPrizeHistory();
+});
+document.getElementById('btnPrizeBack').addEventListener('click', () => {
+  teacherPrizeStep.hidden = true;
+  teacherActiveStep.hidden = false;
+});
+document.getElementById('btnSubmitPrize').addEventListener('click', async () => {
+  const classPeriod = prizeClassPeriodInput.value.trim();
+  const description = prizeDescriptionInput.value.trim();
+  if(!classPeriod || !description) return;
+
+  const period = await VocabBackend.getCompetitionPeriod();
+  const standings = await VocabBackend.getClassLeaderboard();
+  const winnerRow = standings.find(row => row.class_period === classPeriod);
+  const classLevel = winnerRow ? winnerRow.class_level : null;
+
+  const ok = await VocabBackend.logCompetitionPrize(
+    period ? period.period_start : new Date().toISOString().slice(0, 10),
+    period ? period.period_end : new Date().toISOString().slice(0, 10),
+    period ? period.label : null,
+    classPeriod, classLevel, description
+  );
+  prizeFeedback.textContent = ok ? 'Prize logged.' : 'Something went wrong — try again.';
+  prizeFeedback.className = ok ? 'typing-feedback correct' : 'typing-feedback wrong';
+  if(ok){
+    prizeDescriptionInput.value = '';
+    await renderPrizeHistory();
   }
 });
 

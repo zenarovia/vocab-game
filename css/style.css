@@ -937,6 +937,17 @@ html,body{
   color:var(--cream-dim);
   margin-bottom:16px;
 }
+.leaderboard-recent-winner{
+  font-size:0.85rem;
+  font-weight:700;
+  color:var(--marigold);
+  background:rgba(255,182,39,0.1);
+  border:1px solid rgba(255,182,39,0.3);
+  border-radius:12px;
+  padding:8px 14px;
+  margin-bottom:16px;
+}
+.leaderboard-recent-winner[hidden]{ display:none; }
 .leaderboard-list{
   width:100%;
   max-width:380px;

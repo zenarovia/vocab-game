@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=45">
+<link rel="stylesheet" href="css/style.css?v=46">
 </head>
 <body>
 
@@ -15,7 +15,7 @@
 
   <!-- Ambient background pattern -->
   <div class="bg-pattern" aria-hidden="true"></div>
-  <div class="build-tag" aria-hidden="true">build 45</div>
+  <div class="build-tag" aria-hidden="true">build 46</div>
   <div class="teacher-override-badge" id="teacherOverrideBadge" hidden>Teacher override active</div>
 
   <!-- Top bar: coin counter + mascot egg. The mascot egg doubles as a
@@ -55,6 +55,7 @@
           <button class="set-option" id="btnOpenAssign" type="button">Set Assignment</button>
           <button class="set-option" id="btnOpenGrading" type="button">Grading Report</button>
           <button class="set-option" id="btnOpenPeriod" type="button">Competition Period</button>
+          <button class="set-option" id="btnOpenPrize" type="button">Log Prize</button>
           <button class="set-option" id="btnTeacherOff" type="button">Turn off override</button>
           <button class="set-option" id="btnTeacherClose" type="button">Close</button>
         </div>
@@ -104,6 +105,19 @@
         <div class="teacher-panel-buttons">
           <button class="btn-primary btn-small" id="btnSubmitPeriod" type="button">Set Period</button>
           <button class="set-option" id="btnPeriodBack" type="button">Back</button>
+        </div>
+      </div>
+      <div id="teacherPrizeStep" hidden>
+        <p class="subtitle" id="prizeWinnerSuggestion">Log what the winning class got for this period.</p>
+        <input type="text" id="prizeClassPeriodInput" class="typing-input" placeholder="Winning class period" autocomplete="off" />
+        <input type="text" id="prizeDescriptionInput" class="typing-input" placeholder="Prize (e.g. Pizza party, extra recess)" autocomplete="off" style="margin-top: 10px;" />
+        <p class="typing-feedback" id="prizeFeedback"></p>
+        <div class="teacher-panel-buttons">
+          <button class="btn-primary btn-small" id="btnSubmitPrize" type="button">Log Prize</button>
+        </div>
+        <div class="dashboard-list" id="prizeHistoryList"></div>
+        <div class="teacher-panel-buttons">
+          <button class="set-option" id="btnPrizeBack" type="button">Back</button>
         </div>
       </div>
     </div>
@@ -317,6 +331,7 @@
         <button class="leaderboard-tab" id="tabOverall" type="button">Overall (All Levels)</button>
       </div>
       <p class="leaderboard-tab-note" id="leaderboardTabNote">Same class level as you &middot; ranked by participation + mastery points</p>
+      <p class="leaderboard-recent-winner" id="leaderboardRecentWinner" hidden></p>
       <div class="leaderboard-list" id="leaderboardList"></div>
       <button class="btn-primary" id="btnCloseLeaderboard" type="button" style="margin-top: 20px;">Back</button>
     </div>
@@ -340,6 +355,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase-client.js"></script>
-<script src="js/game.js?v=45"></script>
+<script src="js/game.js?v=46"></script>
 </body>
 </html>
