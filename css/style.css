@@ -910,6 +910,33 @@ html,body{
 }
 
 /* ---------- Leaderboard ---------- */
+.leaderboard-tabs{
+  display:flex;
+  justify-content:center;
+  gap:10px;
+  margin-bottom:8px;
+}
+.leaderboard-tab{
+  font-family:var(--font-display);
+  font-weight:700;
+  font-size:0.85rem;
+  color:var(--cream-dim);
+  background:transparent;
+  border:2px solid rgba(255,182,39,0.25);
+  padding:8px 16px;
+  border-radius:999px;
+  cursor:pointer;
+}
+.leaderboard-tab.is-active{
+  color:var(--jungle-deep);
+  background:var(--marigold);
+  border-color:var(--marigold);
+}
+.leaderboard-tab-note{
+  font-size:0.78rem;
+  color:var(--cream-dim);
+  margin-bottom:16px;
+}
 .leaderboard-list{
   width:100%;
   max-width:380px;

@@ -628,9 +628,27 @@ const leaderboardList = document.getElementById('leaderboardList');
 
 btnLeaderboard.addEventListener('click', async () => {
   showScreen('leaderboard');
+  leaderboardTab = 'level';
+  document.getElementById('tabLevelBracket').classList.add('is-active');
+  document.getElementById('tabOverall').classList.remove('is-active');
   await renderLeaderboard();
 });
 btnCloseLeaderboard.addEventListener('click', () => showScreen('start'));
+
+document.getElementById('tabLevelBracket').addEventListener('click', async () => {
+  leaderboardTab = 'level';
+  document.getElementById('tabLevelBracket').classList.add('is-active');
+  document.getElementById('tabOverall').classList.remove('is-active');
+  await renderLeaderboard();
+});
+document.getElementById('tabOverall').addEventListener('click', async () => {
+  leaderboardTab = 'overall';
+  document.getElementById('tabOverall').classList.add('is-active');
+  document.getElementById('tabLevelBracket').classList.remove('is-active');
+  await renderLeaderboard();
+});
+
+let leaderboardTab = 'level'; // 'level' | 'overall'
 
 async function renderLeaderboard(){
   leaderboardList.innerHTML = '<p class="leaderboard-empty">Loading...</p>';
@@ -638,13 +656,25 @@ async function renderLeaderboard(){
   const period = await VocabBackend.getCompetitionPeriod();
   if(period){
     document.getElementById('leaderboardPeriodLabel').textContent =
-      `${period.label} (${period.period_start} to ${period.period_end}) \u00b7 participation + mastery, 60/40`;
+      `${period.label} (${period.period_start} to ${period.period_end})`;
   }
 
   const profile = await VocabBackend.getStudentProfile();
   const myClassPeriod = profile ? profile.class_period : null;
+  const myClassLevel = profile ? profile.class_level : null;
 
-  const standings = await VocabBackend.getClassLeaderboard();
+  const tabNote = document.getElementById('leaderboardTabNote');
+  let standings;
+  if(leaderboardTab === 'overall'){
+    tabNote.textContent = 'All levels \u00b7 ranked by participation + accuracy (not raw points, so every level competes fairly)';
+    standings = await VocabBackend.getOverallCrossLevelLeaderboard();
+  } else {
+    tabNote.textContent = myClassLevel
+      ? `Same class level (${myClassLevel}) \u00b7 ranked by participation + mastery points`
+      : 'Ranked by participation + mastery points';
+    const all = await VocabBackend.getClassLeaderboard();
+    standings = myClassLevel ? all.filter(row => row.class_level === myClassLevel) : all;
+  }
 
   if(standings.length === 0){
     leaderboardList.innerHTML = '<p class="leaderboard-empty">No class activity yet this period.</p>';
@@ -660,6 +690,9 @@ async function renderLeaderboard(){
   standings.forEach((row, i) => {
     const isMine = myClassPeriod && row.class_period === myClassPeriod;
     const displayName = isMine ? row.class_period : `Class ${ANON_LETTERS[anonCount++] || anonCount}`;
+    const detail = leaderboardTab === 'overall'
+      ? `${Math.round(row.avg_participation_this_week)} avg questions &middot; ${row.avg_accuracy_this_week != null ? Math.round(row.avg_accuracy_this_week) : '\u2014'}% avg accuracy`
+      : `${Math.round(row.avg_participation_this_week)} avg questions &middot; ${Math.round(row.avg_mastery_this_week)} avg mastery pts`;
 
     const el = document.createElement('div');
     el.className = 'leaderboard-row' + (i === 0 ? ' is-first' : '') + (isMine ? ' is-mine' : '');
@@ -667,7 +700,7 @@ async function renderLeaderboard(){
       <span class="leaderboard-rank">#${i + 1}</span>
       <span class="leaderboard-info">
         <span class="leaderboard-class">${displayName}${isMine ? ' (you)' : ''}</span><br>
-        <span class="leaderboard-detail">${Math.round(row.avg_participation_this_week)} avg questions &middot; ${Math.round(row.avg_mastery_this_week)} avg mastery pts</span>
+        <span class="leaderboard-detail">${detail}</span>
       </span>
       <span class="leaderboard-score">${Math.round(row.combined_score)}</span>
     `;
@@ -1855,13 +1888,14 @@ function promptForStudentSetup(){
     const form = document.getElementById('setupForm');
     const nameInput = document.getElementById('setupNameInput');
     const periodInput = document.getElementById('setupPeriodInput');
+    const levelInput = document.getElementById('setupLevelInput');
     const errorEl = document.getElementById('setupError');
 
     form.addEventListener('submit', async function onSubmit(e){
       e.preventDefault();
       const name = nameInput.value.trim();
       if(!name) return;
-      const created = await VocabBackend.createStudentProfile(name, periodInput.value.trim());
+      const created = await VocabBackend.createStudentProfile(name, periodInput.value.trim(), levelInput.value.trim());
       if(!created){
         errorEl.textContent = 'Something went wrong saving your name — try again.';
         return;

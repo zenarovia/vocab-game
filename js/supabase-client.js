@@ -49,7 +49,7 @@ async function getStudentProfile(){
   if(!currentStudentId) return null;
   const { data, error } = await sb
     .from('students')
-    .select('id, display_name, class_period')
+    .select('id, display_name, class_period, class_level')
     .eq('id', currentStudentId)
     .maybeSingle();
   if(error){
@@ -59,11 +59,16 @@ async function getStudentProfile(){
   return data;
 }
 
-async function createStudentProfile(displayName, classPeriod){
+async function createStudentProfile(displayName, classPeriod, classLevel){
   if(!currentStudentId) return null;
   const { data, error } = await sb
     .from('students')
-    .insert({ id: currentStudentId, display_name: displayName, class_period: classPeriod || null })
+    .insert({
+      id: currentStudentId,
+      display_name: displayName,
+      class_period: classPeriod || null,
+      class_level: classLevel || null,
+    })
     .select()
     .single();
   if(error){
@@ -238,10 +243,26 @@ function logActivity(setId, mode, isCorrect, points){
 async function getClassLeaderboard(){
   const { data, error } = await sb
     .from('class_weekly_leaderboard')
-    .select('class_period, student_count, avg_participation_this_week, avg_mastery_this_week, combined_score')
+    .select('class_period, class_level, student_count, avg_participation_this_week, avg_mastery_this_week, combined_score')
     .order('combined_score', { ascending: false });
   if(error){
     console.error('Failed to load class leaderboard:', error);
+    return [];
+  }
+  return data || [];
+}
+
+// Overall cross-level standings — uses accuracy % instead of raw
+// mastery points, since raw points naturally favor a class that's
+// unlocked higher-weight activities. Lets a beginner class genuinely
+// outrank a more advanced one on real effort + skill.
+async function getOverallCrossLevelLeaderboard(){
+  const { data, error } = await sb
+    .from('overall_cross_level_leaderboard')
+    .select('class_period, class_level, student_count, avg_participation_this_week, avg_accuracy_this_week, combined_score')
+    .order('combined_score', { ascending: false });
+  if(error){
+    console.error('Failed to load overall cross-level leaderboard:', error);
     return [];
   }
   return data || [];
@@ -346,6 +367,7 @@ window.VocabBackend = {
   getAssignedSetForClassPeriod,
   logActivity,
   getClassLeaderboard,
+  getOverallCrossLevelLeaderboard,
   getClassStatus,
   getRecentClassActivity,
   setClassAssignment,

@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=44">
+<link rel="stylesheet" href="css/style.css?v=45">
 </head>
 <body>
 
@@ -15,7 +15,7 @@
 
   <!-- Ambient background pattern -->
   <div class="bg-pattern" aria-hidden="true"></div>
-  <div class="build-tag" aria-hidden="true">build 44</div>
+  <div class="build-tag" aria-hidden="true">build 45</div>
   <div class="teacher-override-badge" id="teacherOverrideBadge" hidden>Teacher override active</div>
 
   <!-- Top bar: coin counter + mascot egg. The mascot egg doubles as a
@@ -293,6 +293,14 @@
           autocomplete="off"
           style="margin-top: 12px;"
         />
+        <input
+          type="text"
+          id="setupLevelInput"
+          class="typing-input"
+          placeholder="Class level, e.g. Spanish 1 (optional)"
+          autocomplete="off"
+          style="margin-top: 12px;"
+        />
         <button class="btn-primary" type="submit" style="margin-top: 18px;">Empezar</button>
       </form>
       <p class="typing-feedback wrong" id="setupError"></p>
@@ -304,6 +312,11 @@
     <div class="start-card">
       <h1 class="title">🏆 Class Leaderboard</h1>
       <p class="subtitle" id="leaderboardPeriodLabel">This week &middot; participation + mastery, 60/40</p>
+      <div class="leaderboard-tabs">
+        <button class="leaderboard-tab is-active" id="tabLevelBracket" type="button">Your Level</button>
+        <button class="leaderboard-tab" id="tabOverall" type="button">Overall (All Levels)</button>
+      </div>
+      <p class="leaderboard-tab-note" id="leaderboardTabNote">Same class level as you &middot; ranked by participation + mastery points</p>
       <div class="leaderboard-list" id="leaderboardList"></div>
       <button class="btn-primary" id="btnCloseLeaderboard" type="button" style="margin-top: 20px;">Back</button>
     </div>
@@ -327,6 +340,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase-client.js"></script>
-<script src="js/game.js?v=44"></script>
+<script src="js/game.js?v=45"></script>
 </body>
 </html>
