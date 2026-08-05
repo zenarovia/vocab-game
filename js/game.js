@@ -634,10 +634,17 @@ btnCloseLeaderboard.addEventListener('click', () => showScreen('start'));
 
 async function renderLeaderboard(){
   leaderboardList.innerHTML = '<p class="leaderboard-empty">Loading...</p>';
+
+  const period = await VocabBackend.getCompetitionPeriod();
+  if(period){
+    document.getElementById('leaderboardPeriodLabel').textContent =
+      `${period.label} (${period.period_start} to ${period.period_end}) \u00b7 participation + mastery, 60/40`;
+  }
+
   const standings = await VocabBackend.getClassLeaderboard();
 
   if(standings.length === 0){
-    leaderboardList.innerHTML = '<p class="leaderboard-empty">No class activity yet this week.</p>';
+    leaderboardList.innerHTML = '<p class="leaderboard-empty">No class activity yet this period.</p>';
     return;
   }
 
@@ -693,12 +700,14 @@ function openTeacherOverlay(){
     teacherDashboardStep.hidden = true;
     teacherAssignStep.hidden = true;
     teacherGradingStep.hidden = true;
+    teacherPeriodStep.hidden = true;
   } else {
     teacherPasscodeStep.hidden = false;
     teacherActiveStep.hidden = true;
     teacherDashboardStep.hidden = true;
     teacherAssignStep.hidden = true;
     teacherGradingStep.hidden = true;
+    teacherPeriodStep.hidden = true;
     teacherPasscodeInput.value = '';
     teacherPasscodeError.textContent = '';
   }
@@ -843,6 +852,46 @@ btnDownloadGrading.addEventListener('click', () => {
   a.download = `grading-report-${gradingStartInput.value}-to-${gradingEndInput.value}.csv`;
   a.click();
   URL.revokeObjectURL(url);
+});
+
+// ---- Competition period / short-week adjustment (same passcode panel) ----
+const teacherPeriodStep = document.getElementById('teacherPeriodStep');
+const currentPeriodLabel = document.getElementById('currentPeriodLabel');
+const periodStartInput = document.getElementById('periodStartInput');
+const periodEndInput = document.getElementById('periodEndInput');
+const periodLabelInput = document.getElementById('periodLabelInput');
+const periodFeedback = document.getElementById('periodFeedback');
+
+document.getElementById('btnOpenPeriod').addEventListener('click', async () => {
+  teacherActiveStep.hidden = true;
+  teacherPeriodStep.hidden = false;
+  periodFeedback.textContent = '';
+  periodFeedback.className = 'typing-feedback';
+  const period = await VocabBackend.getCompetitionPeriod();
+  if(period){
+    currentPeriodLabel.textContent = `Currently: ${period.label} (${period.period_start} to ${period.period_end})`;
+    periodStartInput.value = period.period_start;
+    periodEndInput.value = period.period_end;
+    periodLabelInput.value = period.label === 'Current week' ? '' : period.label;
+  }
+});
+document.getElementById('btnPeriodBack').addEventListener('click', () => {
+  teacherPeriodStep.hidden = true;
+  teacherActiveStep.hidden = false;
+});
+document.getElementById('btnSubmitPeriod').addEventListener('click', async () => {
+  const start = periodStartInput.value;
+  const end = periodEndInput.value;
+  const label = periodLabelInput.value.trim();
+  if(!start || !end) return;
+  const ok = await VocabBackend.setCompetitionPeriod(start, end, label);
+  periodFeedback.textContent = ok
+    ? `Competition period set: ${label || start + ' to ' + end}.`
+    : 'Something went wrong — try again.';
+  periodFeedback.className = ok ? 'typing-feedback correct' : 'typing-feedback wrong';
+  if(ok){
+    currentPeriodLabel.textContent = `Currently: ${label || 'Custom range'} (${start} to ${end})`;
+  }
 });
 
 document.getElementById('btnLoadDashboard').addEventListener('click', async () => {

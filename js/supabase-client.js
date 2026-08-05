@@ -306,6 +306,33 @@ async function getGradingReport(startDate, endDate){
   return data || [];
 }
 
+// Reads the active competition period (teacher-set, or the current
+// calendar week if nothing's been set) — powers the short-week
+// adjustment, so a holiday-shortened week isn't scored like a normal one.
+async function getCompetitionPeriod(){
+  const { data, error } = await sb.rpc('get_competition_period');
+  if(error){
+    console.error('Failed to load competition period:', error);
+    return null;
+  }
+  return (data && data[0]) ? data[0] : null;
+}
+
+// Sets the competition period — the app's sanctioned write path,
+// reachable only through the passcode-gated teacher panel.
+async function setCompetitionPeriod(startDate, endDate, label){
+  const { error } = await sb.rpc('set_competition_period', {
+    p_start: startDate,
+    p_end: endDate,
+    p_label: label || null,
+  });
+  if(error){
+    console.error('Failed to set competition period:', error);
+    return false;
+  }
+  return true;
+}
+
 window.VocabBackend = {
   DEFAULT_SET_ID,
   ensureSignedIn,
@@ -323,4 +350,6 @@ window.VocabBackend = {
   getRecentClassActivity,
   setClassAssignment,
   getGradingReport,
+  getCompetitionPeriod,
+  setCompetitionPeriod,
 };

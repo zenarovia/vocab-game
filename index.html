@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=42">
+<link rel="stylesheet" href="css/style.css?v=43">
 </head>
 <body>
 
@@ -15,7 +15,7 @@
 
   <!-- Ambient background pattern -->
   <div class="bg-pattern" aria-hidden="true"></div>
-  <div class="build-tag" aria-hidden="true">build 42</div>
+  <div class="build-tag" aria-hidden="true">build 43</div>
   <div class="teacher-override-badge" id="teacherOverrideBadge" hidden>Teacher override active</div>
 
   <!-- Top bar: coin counter + mascot egg. The mascot egg doubles as a
@@ -54,6 +54,7 @@
           <button class="btn-primary btn-small" id="btnOpenDashboard" type="button">View Class Dashboard</button>
           <button class="set-option" id="btnOpenAssign" type="button">Set Assignment</button>
           <button class="set-option" id="btnOpenGrading" type="button">Grading Report</button>
+          <button class="set-option" id="btnOpenPeriod" type="button">Competition Period</button>
           <button class="set-option" id="btnTeacherOff" type="button">Turn off override</button>
           <button class="set-option" id="btnTeacherClose" type="button">Close</button>
         </div>
@@ -91,6 +92,18 @@
         <div class="dashboard-list" id="gradingList"></div>
         <div class="teacher-panel-buttons">
           <button class="set-option" id="btnGradingBack" type="button">Back</button>
+        </div>
+      </div>
+      <div id="teacherPeriodStep" hidden>
+        <p class="subtitle">The competition normally runs Mon-Sun. Set a custom range here for a short week (a holiday, a snow day) so the leaderboard doesn't compare it against a full week.</p>
+        <p class="typing-feedback correct" id="currentPeriodLabel"></p>
+        <input type="date" id="periodStartInput" class="typing-input" />
+        <input type="date" id="periodEndInput" class="typing-input" style="margin-top: 10px;" />
+        <input type="text" id="periodLabelInput" class="typing-input" placeholder="Label (e.g. Short week — holiday Mon/Tue)" style="margin-top: 10px;" />
+        <p class="typing-feedback" id="periodFeedback"></p>
+        <div class="teacher-panel-buttons">
+          <button class="btn-primary btn-small" id="btnSubmitPeriod" type="button">Set Period</button>
+          <button class="set-option" id="btnPeriodBack" type="button">Back</button>
         </div>
       </div>
     </div>
@@ -290,7 +303,7 @@
   <section class="screen" id="screen-leaderboard" hidden>
     <div class="start-card">
       <h1 class="title">🏆 Class Leaderboard</h1>
-      <p class="subtitle">This week &middot; participation + mastery, 60/40</p>
+      <p class="subtitle" id="leaderboardPeriodLabel">This week &middot; participation + mastery, 60/40</p>
       <div class="leaderboard-list" id="leaderboardList"></div>
       <button class="btn-primary" id="btnCloseLeaderboard" type="button" style="margin-top: 20px;">Back</button>
     </div>
@@ -314,6 +327,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase-client.js"></script>
-<script src="js/game.js?v=42"></script>
+<script src="js/game.js?v=43"></script>
 </body>
 </html>
