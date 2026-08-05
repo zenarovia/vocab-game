@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=40">
+<link rel="stylesheet" href="css/style.css?v=41">
 </head>
 <body>
 
@@ -15,7 +15,7 @@
 
   <!-- Ambient background pattern -->
   <div class="bg-pattern" aria-hidden="true"></div>
-  <div class="build-tag" aria-hidden="true">build 40</div>
+  <div class="build-tag" aria-hidden="true">build 41</div>
   <div class="teacher-override-badge" id="teacherOverrideBadge" hidden>Teacher override active</div>
 
   <!-- Top bar: coin counter + mascot egg. The mascot egg doubles as a
@@ -52,6 +52,8 @@
         <p class="subtitle">Every level is unlocked for this session. Pick one to jump straight into it for a class activity.</p>
         <div class="teacher-panel-buttons">
           <button class="btn-primary btn-small" id="btnOpenDashboard" type="button">View Class Dashboard</button>
+          <button class="set-option" id="btnOpenAssign" type="button">Set Assignment</button>
+          <button class="set-option" id="btnOpenGrading" type="button">Grading Report</button>
           <button class="set-option" id="btnTeacherOff" type="button">Turn off override</button>
           <button class="set-option" id="btnTeacherClose" type="button">Close</button>
         </div>
@@ -68,7 +70,31 @@
           <button class="set-option" id="btnDashboardBack" type="button">Back</button>
         </div>
       </div>
+      <div id="teacherAssignStep" hidden>
+        <p class="subtitle">Assign a vocab set to a class period.</p>
+        <input type="text" id="assignClassPeriodInput" class="typing-input" placeholder="Class period (e.g. Period 3)" autocomplete="off" />
+        <select id="assignSetSelect" class="typing-input" style="margin-top: 12px;"></select>
+        <p class="typing-feedback" id="assignFeedback"></p>
+        <div class="teacher-panel-buttons">
+          <button class="btn-primary btn-small" id="btnSubmitAssign" type="button">Assign</button>
+          <button class="set-option" id="btnAssignBack" type="button">Back</button>
+        </div>
+      </div>
+      <div id="teacherGradingStep" hidden>
+        <p class="subtitle">Generate a report for any date range.</p>
+        <input type="date" id="gradingStartInput" class="typing-input" />
+        <input type="date" id="gradingEndInput" class="typing-input" style="margin-top: 10px;" />
+        <div class="teacher-panel-buttons">
+          <button class="btn-primary btn-small" id="btnRunGrading" type="button">Generate</button>
+          <button class="set-option" id="btnDownloadGrading" type="button" hidden>Download CSV</button>
+        </div>
+        <div class="dashboard-list" id="gradingList"></div>
+        <div class="teacher-panel-buttons">
+          <button class="set-option" id="btnGradingBack" type="button">Back</button>
+        </div>
+      </div>
     </div>
+
   </div>
 
   <!-- Set select: current/assigned set stays prominent; other available
@@ -288,6 +314,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase-client.js"></script>
-<script src="js/game.js?v=40"></script>
+<script src="js/game.js?v=41"></script>
 </body>
 </html>

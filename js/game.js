@@ -673,10 +673,14 @@ function openTeacherOverlay(){
     teacherPasscodeStep.hidden = true;
     teacherActiveStep.hidden = false;
     teacherDashboardStep.hidden = true;
+    teacherAssignStep.hidden = true;
+    teacherGradingStep.hidden = true;
   } else {
     teacherPasscodeStep.hidden = false;
     teacherActiveStep.hidden = true;
     teacherDashboardStep.hidden = true;
+    teacherAssignStep.hidden = true;
+    teacherGradingStep.hidden = true;
     teacherPasscodeInput.value = '';
     teacherPasscodeError.textContent = '';
   }
@@ -724,6 +728,105 @@ document.getElementById('btnDashboardBack').addEventListener('click', () => {
   teacherDashboardStep.hidden = true;
   teacherActiveStep.hidden = false;
 });
+
+// ---- Set assignment (part of the same passcode-gated panel) --------------
+const teacherAssignStep = document.getElementById('teacherAssignStep');
+const assignClassPeriodInput = document.getElementById('assignClassPeriodInput');
+const assignSetSelect = document.getElementById('assignSetSelect');
+const assignFeedback = document.getElementById('assignFeedback');
+
+document.getElementById('btnOpenAssign').addEventListener('click', async () => {
+  teacherActiveStep.hidden = true;
+  teacherAssignStep.hidden = false;
+  assignFeedback.textContent = '';
+  assignFeedback.className = 'typing-feedback';
+  const profile = await VocabBackend.getStudentProfile();
+  if(profile && profile.class_period && !assignClassPeriodInput.value){
+    assignClassPeriodInput.value = profile.class_period;
+  }
+  assignSetSelect.innerHTML = '';
+  Object.values(VOCAB_SETS).sort((a, b) => a.order - b.order).forEach(set => {
+    const opt = document.createElement('option');
+    opt.value = set.id;
+    opt.textContent = set.name;
+    assignSetSelect.appendChild(opt);
+  });
+});
+document.getElementById('btnAssignBack').addEventListener('click', () => {
+  teacherAssignStep.hidden = true;
+  teacherActiveStep.hidden = false;
+});
+document.getElementById('btnSubmitAssign').addEventListener('click', async () => {
+  const classPeriod = assignClassPeriodInput.value.trim();
+  const setId = assignSetSelect.value;
+  if(!classPeriod || !setId) return;
+  const ok = await VocabBackend.setClassAssignment(classPeriod, setId);
+  assignFeedback.textContent = ok
+    ? `${VOCAB_SETS[setId].name} is now assigned to ${classPeriod}.`
+    : 'Something went wrong — try again.';
+  assignFeedback.className = ok ? 'typing-feedback correct' : 'typing-feedback wrong';
+});
+
+// ---- Grading report (part of the same passcode-gated panel) --------------
+const teacherGradingStep = document.getElementById('teacherGradingStep');
+const gradingStartInput = document.getElementById('gradingStartInput');
+const gradingEndInput = document.getElementById('gradingEndInput');
+const gradingList = document.getElementById('gradingList');
+const btnDownloadGrading = document.getElementById('btnDownloadGrading');
+let lastGradingReport = [];
+
+document.getElementById('btnOpenGrading').addEventListener('click', () => {
+  teacherActiveStep.hidden = true;
+  teacherGradingStep.hidden = false;
+  const today = new Date().toISOString().slice(0, 10);
+  if(!gradingStartInput.value) gradingStartInput.value = today;
+  if(!gradingEndInput.value) gradingEndInput.value = today;
+  btnDownloadGrading.hidden = true;
+  gradingList.innerHTML = '';
+});
+document.getElementById('btnGradingBack').addEventListener('click', () => {
+  teacherGradingStep.hidden = true;
+  teacherActiveStep.hidden = false;
+});
+document.getElementById('btnRunGrading').addEventListener('click', async () => {
+  const start = gradingStartInput.value;
+  const end = gradingEndInput.value;
+  if(!start || !end) return;
+  gradingList.innerHTML = '<p class="leaderboard-empty">Loading...</p>';
+  btnDownloadGrading.hidden = true;
+  lastGradingReport = await VocabBackend.getGradingReport(start, end);
+
+  if(lastGradingReport.length === 0){
+    gradingList.innerHTML = '<p class="leaderboard-empty">No activity in that range.</p>';
+    return;
+  }
+
+  gradingList.innerHTML = '';
+  lastGradingReport.forEach(row => {
+    const el = document.createElement('div');
+    el.className = 'dashboard-row';
+    el.innerHTML = `
+      <span class="dashboard-name">${row.student_name}</span>
+      <span class="dashboard-detail">${row.class_period || '—'} &middot; ${row.set_id} &middot; ${row.participation_count} attempts &middot; ${row.mastery_points} pts &middot; ${row.accuracy_pct ?? '—'}% acc.</span>
+    `;
+    gradingList.appendChild(el);
+  });
+  btnDownloadGrading.hidden = false;
+});
+btnDownloadGrading.addEventListener('click', () => {
+  if(lastGradingReport.length === 0) return;
+  const headers = ['student_name', 'class_period', 'set_id', 'participation_count', 'mastery_points', 'accuracy_pct'];
+  const rows = lastGradingReport.map(row => headers.map(h => row[h] ?? '').join(','));
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `grading-report-${gradingStartInput.value}-to-${gradingEndInput.value}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
 document.getElementById('btnLoadDashboard').addEventListener('click', async () => {
   const classPeriod = dashboardClassPeriodInput.value.trim();
   if(!classPeriod) return;

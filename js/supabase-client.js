@@ -275,6 +275,37 @@ async function getRecentClassActivity(classPeriod, minutes){
   return data || [];
 }
 
+// Writes (or updates) which set is assigned to a class period. Uses a
+// security-definer function since set_assignments only has a read
+// policy by default — this is the app's sanctioned write path,
+// reachable only through the passcode-gated teacher panel.
+async function setClassAssignment(classPeriod, setId){
+  const { error } = await sb.rpc('set_class_assignment', {
+    p_class_period: classPeriod,
+    p_set_id: setId,
+  });
+  if(error){
+    console.error('Failed to set class assignment:', error);
+    return false;
+  }
+  return true;
+}
+
+// Fetches a grading report for any date range — participation and
+// mastery per student, per set. Powers the in-app grading screen
+// (previously only available by running SQL directly in Supabase).
+async function getGradingReport(startDate, endDate){
+  const { data, error } = await sb.rpc('get_grading_report', {
+    start_date: startDate,
+    end_date: endDate,
+  });
+  if(error){
+    console.error('Failed to load grading report:', error);
+    return [];
+  }
+  return data || [];
+}
+
 window.VocabBackend = {
   DEFAULT_SET_ID,
   ensureSignedIn,
@@ -290,4 +321,6 @@ window.VocabBackend = {
   getClassLeaderboard,
   getClassStatus,
   getRecentClassActivity,
+  setClassAssignment,
+  getGradingReport,
 };
