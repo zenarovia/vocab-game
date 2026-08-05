@@ -260,6 +260,21 @@ async function getClassStatus(classPeriod){
   return data || [];
 }
 
+// Fetches recent correct-answer events for the ambient display's reward
+// ticker — a fun "who just did something" feed for a classroom TV/iFP,
+// separate from the quieter teacher dashboard.
+async function getRecentClassActivity(classPeriod, minutes){
+  const { data, error } = await sb.rpc('get_recent_class_activity', {
+    p_class_period: classPeriod,
+    p_minutes: minutes || 20,
+  });
+  if(error){
+    console.error('Failed to load recent activity:', error);
+    return [];
+  }
+  return data || [];
+}
+
 window.VocabBackend = {
   DEFAULT_SET_ID,
   ensureSignedIn,
@@ -274,4 +289,5 @@ window.VocabBackend = {
   logActivity,
   getClassLeaderboard,
   getClassStatus,
+  getRecentClassActivity,
 };

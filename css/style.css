@@ -184,6 +184,79 @@ html,body{
   color:var(--coral);
 }
 
+/* ---------- Ambient display (classroom TV/iFP) ---------- */
+.screen-ambient{
+  width:100%;
+  max-width:none;
+  align-items:stretch;
+  padding:32px 48px;
+}
+.ambient-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:24px;
+}
+.ambient-title{
+  font-family:var(--font-display);
+  font-weight:800;
+  font-size:2.2rem;
+  color:var(--cream);
+}
+.ambient-roster{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(160px, 1fr));
+  gap:16px;
+  margin-bottom:32px;
+}
+.ambient-student-card{
+  background:rgba(255,255,255,0.06);
+  border:2px solid rgba(255,125,172,0.2);
+  border-radius:var(--radius-md);
+  padding:16px;
+  text-align:center;
+}
+.ambient-student-card.is-connected{ border-color:var(--turquoise); }
+.ambient-student-name{
+  font-family:var(--font-display);
+  font-weight:700;
+  font-size:1.1rem;
+  color:var(--cream);
+  margin-bottom:8px;
+}
+.ambient-student-dot{
+  width:14px; height:14px;
+  border-radius:50%;
+  margin:0 auto;
+  background:var(--cream-dim);
+}
+.ambient-student-card.is-connected .ambient-student-dot{
+  background:var(--turquoise);
+  box-shadow:0 0 10px var(--turquoise);
+}
+.ambient-ticker{
+  background:rgba(255,255,255,0.04);
+  border-radius:var(--radius-lg);
+  padding:20px 28px;
+  min-height:100px;
+}
+.ambient-ticker-item{
+  font-family:var(--font-display);
+  font-weight:700;
+  font-size:1.3rem;
+  color:var(--marigold);
+  padding:8px 0;
+  animation:tickerPop 400ms ease;
+}
+.ambient-ticker-empty{
+  color:var(--cream-dim);
+  font-size:1.1rem;
+}
+@keyframes tickerPop{
+  0%{ opacity:0; transform:translateY(8px); }
+  100%{ opacity:1; transform:translateY(0); }
+}
+
 .coin-counter{
   display:flex; align-items:center; gap:8px;
   background:rgba(255,255,255,0.06);

@@ -429,6 +429,7 @@ const screens = {
   complete: document.getElementById('screen-complete'),
   setup: document.getElementById('screen-setup'),
   leaderboard: document.getElementById('screen-leaderboard'),
+  ambient: document.getElementById('screen-ambient'),
 };
 const board = document.getElementById('board');
 const typingPanel = document.getElementById('typingPanel');
@@ -748,16 +749,78 @@ document.getElementById('btnLoadDashboard').addEventListener('click', async () =
   });
 });
 
+// ---- Ambient display (classroom TV/iFP) -----------------------------------
+const ambientClassTitle = document.getElementById('ambientClassTitle');
+const ambientRoster = document.getElementById('ambientRoster');
+const ambientTicker = document.getElementById('ambientTicker');
+let ambientClassPeriod = null;
+let ambientRefreshTimer = null;
+const AMBIENT_REFRESH_MS = 20000;
+const seenTickerTimestamps = new Set();
+
+document.getElementById('btnOpenAmbient').addEventListener('click', () => {
+  const classPeriod = dashboardClassPeriodInput.value.trim();
+  if(!classPeriod) return;
+  ambientClassPeriod = classPeriod;
+  seenTickerTimestamps.clear();
+  ambientTicker.innerHTML = '<p class="ambient-ticker-empty">Waiting for activity...</p>';
+  closeTeacherOverlay();
+  showScreen('ambient');
+  ambientClassTitle.textContent = classPeriod;
+  refreshAmbientDisplay();
+  clearInterval(ambientRefreshTimer);
+  ambientRefreshTimer = setInterval(refreshAmbientDisplay, AMBIENT_REFRESH_MS);
+});
+
+document.getElementById('btnExitAmbient').addEventListener('click', () => {
+  clearInterval(ambientRefreshTimer);
+  ambientRefreshTimer = null;
+  showScreen('start');
+});
+
+async function refreshAmbientDisplay(){
+  if(!ambientClassPeriod) return;
+
+  const roster = await VocabBackend.getClassStatus(ambientClassPeriod);
+  ambientRoster.innerHTML = '';
+  roster.forEach(row => {
+    const card = document.createElement('div');
+    card.className = 'ambient-student-card' + (row.connected_today ? ' is-connected' : '');
+    card.innerHTML = `
+      <div class="ambient-student-name">${row.student_name}</div>
+      <div class="ambient-student-dot"></div>
+    `;
+    ambientRoster.appendChild(card);
+  });
+
+  const recent = await VocabBackend.getRecentClassActivity(ambientClassPeriod, 20);
+  const newOnes = recent.filter(r => !seenTickerTimestamps.has(r.created_at));
+  if(newOnes.length > 0){
+    if(ambientTicker.querySelector('.ambient-ticker-empty')) ambientTicker.innerHTML = '';
+    newOnes.reverse().forEach(r => {
+      seenTickerTimestamps.add(r.created_at);
+      const item = document.createElement('p');
+      item.className = 'ambient-ticker-item';
+      item.textContent = `\u2728 ${r.student_name} earned ${r.points} points in ${r.mode}!`;
+      ambientTicker.insertBefore(item, ambientTicker.firstChild);
+    });
+    // Keep the ticker from growing forever
+    while(ambientTicker.children.length > 12){
+      ambientTicker.removeChild(ambientTicker.lastChild);
+    }
+  }
+}
+
 function showScreen(name){
   Object.entries(screens).forEach(([k, el]) => el.hidden = (k !== name));
   state.screen = name;
   // Level bar is the way to choose/re-choose a level — visible except
   // mid-round, first-time setup, or the leaderboard. Set-select follows
   // the same rule.
-  const hideBars = (name === 'game' || name === 'setup' || name === 'leaderboard');
+  const hideBars = (name === 'game' || name === 'setup' || name === 'leaderboard' || name === 'ambient');
   levelSelectEl.hidden = hideBars;
   setSelectEl.hidden = hideBars;
-  btnLeaderboard.hidden = (name === 'game' || name === 'setup' || name === 'leaderboard');
+  btnLeaderboard.hidden = (name === 'game' || name === 'setup' || name === 'leaderboard' || name === 'ambient');
   if(name !== 'game' && name !== 'setup'){
     updateLevelSelect();
     updateReviewStatus();
