@@ -932,6 +932,10 @@ html,body{
   border-color:var(--marigold);
   background:rgba(255,182,39,0.1);
 }
+.leaderboard-row.is-mine{
+  border-color:var(--turquoise);
+  border-width:2px;
+}
 .leaderboard-rank{
   font-family:var(--font-display);
   font-weight:800;

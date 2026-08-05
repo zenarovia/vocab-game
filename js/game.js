@@ -641,6 +641,9 @@ async function renderLeaderboard(){
       `${period.label} (${period.period_start} to ${period.period_end}) \u00b7 participation + mastery, 60/40`;
   }
 
+  const profile = await VocabBackend.getStudentProfile();
+  const myClassPeriod = profile ? profile.class_period : null;
+
   const standings = await VocabBackend.getClassLeaderboard();
 
   if(standings.length === 0){
@@ -648,14 +651,22 @@ async function renderLeaderboard(){
     return;
   }
 
+  // Anonymize every class except the viewer's own — shows real relative
+  // standing without exposing which other teacher's/class's data it is.
+  let anonCount = 0;
+  const ANON_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
   leaderboardList.innerHTML = '';
   standings.forEach((row, i) => {
+    const isMine = myClassPeriod && row.class_period === myClassPeriod;
+    const displayName = isMine ? row.class_period : `Class ${ANON_LETTERS[anonCount++] || anonCount}`;
+
     const el = document.createElement('div');
-    el.className = 'leaderboard-row' + (i === 0 ? ' is-first' : '');
+    el.className = 'leaderboard-row' + (i === 0 ? ' is-first' : '') + (isMine ? ' is-mine' : '');
     el.innerHTML = `
       <span class="leaderboard-rank">#${i + 1}</span>
       <span class="leaderboard-info">
-        <span class="leaderboard-class">${row.class_period}</span><br>
+        <span class="leaderboard-class">${displayName}${isMine ? ' (you)' : ''}</span><br>
         <span class="leaderboard-detail">${Math.round(row.avg_participation_this_week)} avg questions &middot; ${Math.round(row.avg_mastery_this_week)} avg mastery pts</span>
       </span>
       <span class="leaderboard-score">${Math.round(row.combined_score)}</span>
