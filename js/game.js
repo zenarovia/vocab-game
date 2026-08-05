@@ -180,12 +180,12 @@ const CANONICAL_ACTIVITY_ORDER = ['matching', 'typing', 'listening', 'dictation'
 const GRADUATION_THRESHOLD_COUNT = 3; // words needed before Typing unlocks
 const modeAnsweredCounters = { typing: 0, listening: 0, dictation: 0, context: 0, speed: 0, bonus: 0, sequence: 0 };
 
-function masteryScore(number){
-  const s = statsFor('matching', number);
+function masteryScore(number, mode = 'matching'){
+  const s = statsFor(mode, number);
   return s.correct - s.wrong;
 }
-function getGraduatedWords(){
-  return VOCAB.filter(v => masteryScore(v.number) >= 1);
+function getGraduatedWords(mode = 'matching'){
+  return VOCAB.filter(v => masteryScore(v.number, mode) >= 1);
 }
 
 // Which activities this set actually offers, in canonical order. Falls
@@ -363,6 +363,17 @@ function checkAllBadges(){
   checkPuzzlePieces();
 }
 
+// One themed trophy per vocabulary set — awarded when every puzzle piece
+// for that set has been collected. Reuses the badge backend (a set trophy
+// is just a global one-time achievement, same as any other badge) so no
+// new table is needed. Falls back to a generic trophy image if a future
+// set doesn't have custom art yet.
+const SET_TROPHIES = {
+  'numbers-0-10':  { name: 'Numbers 0-10 Trophy',  image: 'assets/trophies/set_numbers-0-10.jpg' },
+  'numbers-11-20': { name: 'Numbers 11-20 Trophy', image: 'assets/trophies/set_numbers-11-20.jpg' },
+};
+const GENERIC_SET_TROPHY_IMAGE = 'assets/trophies/set_generic.jpg';
+
 function checkPuzzlePieces(){
   const enabled = getEnabledActivities(activeSetId).filter(mode => mode !== 'matching');
   enabled.forEach(mode => {
@@ -373,7 +384,13 @@ function checkPuzzlePieces(){
       VocabBackend.awardPuzzlePiece(activeSetId, mode);
       showToast(`${PUZZLE_PIECE_ICONS[mode] || '\u2728'} \u00a1Pieza de rompecabezas ganada!`);
       if(enabled.every(m => earnedPuzzlePieces.has(`${activeSetId}:${m}`))){
-        showToast(`\ud83c\udfc6 \u00a1Rompecabezas completo para ${VOCAB_SETS[activeSetId].name}!`);
+        const badgeId = `set_trophy_${activeSetId}`;
+        if(!earnedBadges.has(badgeId)){
+          earnedBadges.add(badgeId);
+          VocabBackend.awardBadge(badgeId);
+          const trophyName = SET_TROPHIES[activeSetId] ? SET_TROPHIES[activeSetId].name : `${VOCAB_SETS[activeSetId].name} Trophy`;
+          showToast(`\ud83c\udfc6 \u00a1Trofeo ganado! ${trophyName}`);
+        }
       }
     }
   });
@@ -818,6 +835,7 @@ const badgeGrid = document.getElementById('badgeGrid');
 const puzzleGrid = document.getElementById('puzzleGrid');
 const puzzleSetLabel = document.getElementById('puzzleSetLabel');
 const puzzleCompleteNote = document.getElementById('puzzleCompleteNote');
+const setTrophyGrid = document.getElementById('setTrophyGrid');
 const mascotGrid = document.getElementById('mascotGrid');
 const btnOpenPack = document.getElementById('btnOpenPack');
 const packReveal = document.getElementById('packReveal');
@@ -880,6 +898,17 @@ function renderCollection(){
 
   const allEarned = pieces.length > 0 && pieces.every(mode => earnedPuzzlePieces.has(`${activeSetId}:${mode}`));
   puzzleCompleteNote.hidden = !allEarned;
+
+  setTrophyGrid.innerHTML = '';
+  Object.values(VOCAB_SETS).sort((a, b) => a.order - b.order).forEach(set => {
+    const trophy = SET_TROPHIES[set.id];
+    const isEarned = earnedBadges.has(`set_trophy_${set.id}`);
+    const el = document.createElement('div');
+    el.className = 'mascot-item' + (isEarned ? '' : ' is-locked');
+    el.title = trophy ? trophy.name : `${set.name} Trophy`;
+    el.innerHTML = `<img src="${trophy ? trophy.image : GENERIC_SET_TROPHY_IMAGE}" alt="${set.name} trophy" loading="lazy" />`;
+    setTrophyGrid.appendChild(el);
+  });
 
   mascotGrid.innerHTML = '';
   MASCOT_CATALOG.forEach(mascot => {
