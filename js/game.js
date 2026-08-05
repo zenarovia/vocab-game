@@ -18,33 +18,37 @@
 // VOCAB_SET_1 is currently wired into the live game; VOCAB_SET_2 is
 // prepared content, waiting on the multi-set switching UI (not yet built).
 const VOCAB_SET_1 = [
-  { number: 0,  word: 'cero',   audio: 'assets/audio/cero.mp3?v=2',   context: 'Cinco menos cinco son ___.' },
-  { number: 1,  word: 'uno',    audio: 'assets/audio/uno.mp3?v=2',    context: 'Tres menos dos son ___.' },
-  { number: 2,  word: 'dos',    audio: 'assets/audio/dos.mp3?v=2',    context: 'Tengo ___ manzanas en la mesa.', contextImage: 'assets/context/dos.png' },
-  { number: 3,  word: 'tres',   audio: 'assets/audio/tres.mp3?v=2',   context: 'Hay ___ libros en la mesa.', contextImage: 'assets/context/tres.png' },
-  { number: 4,  word: 'cuatro', audio: 'assets/audio/cuatro.mp3?v=2', context: 'Mi casa tiene ___ ventanas.', contextImage: 'assets/context/cuatro.png' },
-  { number: 5,  word: 'cinco',  audio: 'assets/audio/cinco.mp3?v=2',  context: 'Tengo ___ dólares en mi mochila.', contextImage: 'assets/context/cinco.png' },
-  { number: 6,  word: 'seis',   audio: 'assets/audio/seis.mp3?v=2',   context: 'Hay ___ pelotas en la caja.', contextImage: 'assets/context/seis.png' },
-  { number: 7,  word: 'siete',  audio: 'assets/audio/siete.mp3?v=2',  context: 'La semana tiene ___ días.' },
-  { number: 8,  word: 'ocho',   audio: 'assets/audio/ocho.mp3?v=2',   context: 'La araña tiene ___ patas.' },
-  { number: 9,  word: 'nueve',  audio: 'assets/audio/nueve.mp3?v=2',  context: 'Cuatro más cinco son ___.' },
-  { number: 10, word: 'diez',   audio: 'assets/audio/diez.mp3?v=2',   context: 'Tengo ___ dedos en las manos.' },
+  { number: 0,  word: 'cero',   translation: 'zero',  audio: 'assets/audio/cero.mp3?v=2',   context: 'Cinco menos cinco son ___.' },
+  { number: 1,  word: 'uno',    translation: 'one',   audio: 'assets/audio/uno.mp3?v=2',    context: 'Tres menos dos son ___.' },
+  { number: 2,  word: 'dos',    translation: 'two',   audio: 'assets/audio/dos.mp3?v=2',    context: 'Tengo ___ manzanas en la mesa.', contextImage: 'assets/context/dos.png' },
+  { number: 3,  word: 'tres',   translation: 'three', audio: 'assets/audio/tres.mp3?v=2',   context: 'Hay ___ libros en la mesa.', contextImage: 'assets/context/tres.png' },
+  { number: 4,  word: 'cuatro', translation: 'four',  audio: 'assets/audio/cuatro.mp3?v=2', context: 'Mi casa tiene ___ ventanas.', contextImage: 'assets/context/cuatro.png' },
+  { number: 5,  word: 'cinco',  translation: 'five',  audio: 'assets/audio/cinco.mp3?v=2',  context: 'Tengo ___ dólares en mi mochila.', contextImage: 'assets/context/cinco.png' },
+  { number: 6,  word: 'seis',   translation: 'six',   audio: 'assets/audio/seis.mp3?v=2',   context: 'Hay ___ pelotas en la caja.', contextImage: 'assets/context/seis.png' },
+  { number: 7,  word: 'siete',  translation: 'seven', audio: 'assets/audio/siete.mp3?v=2',  context: 'La semana tiene ___ días.' },
+  { number: 8,  word: 'ocho',   translation: 'eight', audio: 'assets/audio/ocho.mp3?v=2',   context: 'La araña tiene ___ patas.' },
+  { number: 9,  word: 'nueve',  translation: 'nine',  audio: 'assets/audio/nueve.mp3?v=2',  context: 'Cuatro más cinco son ___.' },
+  { number: 10, word: 'diez',   translation: 'ten',   audio: 'assets/audio/diez.mp3?v=2',   context: 'Tengo ___ dedos en las manos.' },
 ];
 
 const VOCAB_SET_2 = [
-  { number: 11, word: 'once',       audio: 'assets/audio/once.mp3',       context: 'Cinco más seis son ___.' },
-  { number: 12, word: 'doce',       audio: 'assets/audio/doce.mp3',       context: 'Una docena tiene ___ huevos.' },
-  { number: 13, word: 'trece',      audio: 'assets/audio/trece.mp3',      context: 'Seis más siete son ___.' },
-  { number: 14, word: 'catorce',    audio: 'assets/audio/catorce.mp3',    context: 'El día de San Valentín es el ___ de febrero.' },
-  { number: 15, word: 'quince',     audio: 'assets/audio/quince.mp3',     context: 'Siete más ocho son ___.' },
-  { number: 16, word: 'dieciséis',  audio: 'assets/audio/dieciseis.mp3',  context: 'Ocho más ocho son ___.' },
-  { number: 17, word: 'diecisiete', audio: 'assets/audio/diecisiete.mp3', context: 'Diez más siete son ___.' },
-  { number: 18, word: 'dieciocho',  audio: 'assets/audio/dieciocho.mp3',  context: 'A los ___ años, puedes votar en Estados Unidos.' },
-  { number: 19, word: 'diecinueve', audio: 'assets/audio/diecinueve.mp3', context: 'Diez más nueve son ___.' },
-  { number: 20, word: 'veinte',     audio: 'assets/audio/veinte.mp3',     context: 'Diez más diez son ___.' },
+  { number: 11, word: 'once',       translation: 'eleven',    audio: 'assets/audio/once.mp3',       context: 'Cinco más seis son ___.' },
+  { number: 12, word: 'doce',       translation: 'twelve',    audio: 'assets/audio/doce.mp3',       context: 'Una docena tiene ___ huevos.' },
+  { number: 13, word: 'trece',      translation: 'thirteen',  audio: 'assets/audio/trece.mp3',      context: 'Seis más siete son ___.' },
+  { number: 14, word: 'catorce',    translation: 'fourteen',  audio: 'assets/audio/catorce.mp3',    context: 'El día de San Valentín es el ___ de febrero.' },
+  { number: 15, word: 'quince',     translation: 'fifteen',   audio: 'assets/audio/quince.mp3',     context: 'Siete más ocho son ___.' },
+  { number: 16, word: 'dieciséis',  translation: 'sixteen',   audio: 'assets/audio/dieciseis.mp3',  context: 'Ocho más ocho son ___.' },
+  { number: 17, word: 'diecisiete', translation: 'seventeen', audio: 'assets/audio/diecisiete.mp3', context: 'Diez más siete son ___.' },
+  { number: 18, word: 'dieciocho',  translation: 'eighteen',  audio: 'assets/audio/dieciocho.mp3',  context: 'A los ___ años, puedes votar en Estados Unidos.' },
+  { number: 19, word: 'diecinueve', translation: 'nineteen',  audio: 'assets/audio/diecinueve.mp3', context: 'Diez más nueve son ___.' },
+  { number: 20, word: 'veinte',     translation: 'twenty',    audio: 'assets/audio/veinte.mp3',     context: 'Diez más diez son ___.' },
 ];
 
 // ---- Set registry -------------------------------------------------------
+// This hardcoded object is now only a FALLBACK — real content is fetched
+// from Supabase at startup (see initApp/loadAllVocabContent) so new sets
+// can be added without touching code. This stays in sync only for
+// offline resilience if that fetch ever fails.
 // Each set has its own id (matches the Supabase vocab_sets.id), a display
 // name, and its own word list. Sets are sequential, same as levels — a
 // set only unlocks once the one before it has been fully graduated in
@@ -55,7 +59,7 @@ const VOCAB_SET_2 = [
 // they don't fit every vocab category equally well (Sequence suits
 // numbers/days/months but not most vocab; Context depends on whether
 // good context sentences/pictures exist for that content).
-const VOCAB_SETS = {
+let VOCAB_SETS = {
   'numbers-0-10':  {
     id: 'numbers-0-10', name: 'Numbers 0-10', words: VOCAB_SET_1, order: 0, previousSetId: null,
     activities: ['matching', 'typing', 'listening', 'dictation', 'context', 'speed', 'bonus', 'sequence'],
@@ -92,9 +96,9 @@ const SPEED_TIME_LIMIT_MS = 9000; // milliseconds to answer before it's marked w
 const BONUS_WEIGHT = 6;   // bonus games (math facts, true/false, odd-one-out) — reward/review tier, same weight as Speed
 const SEQUENCE_WEIGHT = 6; // sequence builder — same reward/review tier as Bonus
 
-// English number words 0-10 — accepted as equivalent to the digit when the
-// expected answer is a number (e.g. typing "one" counts the same as "1").
-const ENGLISH_NUMBER_WORDS = ['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen','twenty'];
+// (English translations now live directly on each vocab word — see
+// VOCAB_SET_1/2 — rather than a numbers-specific lookup table, since
+// non-numeric sets need translations too.)
 
 // ---- Per-word performance memory -------------------------------------
 // Tracked per ACTIVITY (mode), not shared across all of them — doing
@@ -371,6 +375,8 @@ function checkAllBadges(){
 const SET_TROPHIES = {
   'numbers-0-10':  { name: 'Numbers 0-10 Trophy',  image: 'assets/trophies/set_numbers-0-10.jpg' },
   'numbers-11-20': { name: 'Numbers 11-20 Trophy', image: 'assets/trophies/set_numbers-11-20.jpg' },
+  'numbers-tens-10-100':      { name: 'Numbers by Tens Trophy',    image: 'assets/trophies/set_numbers-tens-10-100.jpg' },
+  'numbers-hundreds-100-1m':  { name: 'Numbers to a Million Trophy', image: 'assets/trophies/set_numbers-hundreds-100-1m.jpg' },
 };
 const GENERIC_SET_TROPHY_IMAGE = 'assets/trophies/set_generic.jpg';
 
@@ -1107,7 +1113,9 @@ document.getElementById('btnDashboardBack').addEventListener('click', () => {
 
 // ---- Set assignment (part of the same passcode-gated panel) --------------
 const teacherAssignStep = document.getElementById('teacherAssignStep');
+const assignTargetType = document.getElementById('assignTargetType');
 const assignClassPeriodInput = document.getElementById('assignClassPeriodInput');
+const assignClassLevelInput = document.getElementById('assignClassLevelInput');
 const assignSetSelect = document.getElementById('assignSetSelect');
 const assignFeedback = document.getElementById('assignFeedback');
 
@@ -1120,6 +1128,9 @@ document.getElementById('btnOpenAssign').addEventListener('click', async () => {
   if(profile && profile.class_period && !assignClassPeriodInput.value){
     assignClassPeriodInput.value = profile.class_period;
   }
+  if(profile && profile.class_level && !assignClassLevelInput.value){
+    assignClassLevelInput.value = profile.class_level;
+  }
   assignSetSelect.innerHTML = '';
   Object.values(VOCAB_SETS).sort((a, b) => a.order - b.order).forEach(set => {
     const opt = document.createElement('option');
@@ -1128,17 +1139,25 @@ document.getElementById('btnOpenAssign').addEventListener('click', async () => {
     assignSetSelect.appendChild(opt);
   });
 });
+assignTargetType.addEventListener('change', () => {
+  const isLevel = assignTargetType.value === 'level';
+  assignClassPeriodInput.hidden = isLevel;
+  assignClassLevelInput.hidden = !isLevel;
+});
 document.getElementById('btnAssignBack').addEventListener('click', () => {
   teacherAssignStep.hidden = true;
   teacherActiveStep.hidden = false;
 });
 document.getElementById('btnSubmitAssign').addEventListener('click', async () => {
-  const classPeriod = assignClassPeriodInput.value.trim();
+  const isLevel = assignTargetType.value === 'level';
+  const classPeriod = isLevel ? null : assignClassPeriodInput.value.trim();
+  const classLevel = isLevel ? assignClassLevelInput.value.trim() : null;
   const setId = assignSetSelect.value;
-  if(!classPeriod || !setId) return;
-  const ok = await VocabBackend.setClassAssignment(classPeriod, setId);
+  const target = isLevel ? classLevel : classPeriod;
+  if(!target || !setId) return;
+  const ok = await VocabBackend.setClassAssignment(classPeriod, classLevel, setId);
   assignFeedback.textContent = ok
-    ? `${VOCAB_SETS[setId].name} is now assigned to ${classPeriod}.`
+    ? `${VOCAB_SETS[setId].name} is now assigned to ${isLevel ? 'every ' + target + ' section' : target}.`
     : 'Something went wrong — try again.';
   assignFeedback.className = ok ? 'typing-feedback correct' : 'typing-feedback wrong';
 });
@@ -2235,13 +2254,16 @@ function resolveTypingAnswer(rawGiven){
   const expected = v.word; // shown in feedback as the "correct answer"
   const given = normalizeAnswer(rawGiven);
 
-  // Accept the Spanish word, the digit, or the English word — any of the
-  // three ways a student might reasonably answer, regardless of mode.
+  // Accept the target word and its English translation always; only
+  // accept the bare digit for genuinely numeric sets (a color/animal/etc.
+  // set's id is a string slug, not a number, so this naturally skips there).
   const acceptableAnswers = [
     normalizeAnswer(v.word),
-    normalizeAnswer(String(v.number)),
-    normalizeAnswer(ENGLISH_NUMBER_WORDS[v.number]),
+    normalizeAnswer(v.translation || ''),
   ];
+  if(Number.isInteger(v.number)){
+    acceptableAnswers.push(normalizeAnswer(String(v.number)));
+  }
   const isCorrect = given.length > 0 && acceptableAnswers.includes(given);
   const s = statsFor(state.mode, v.number);
   const weight = isContext ? CONTEXT_WEIGHT
@@ -2302,13 +2324,24 @@ btnFinishTyping.addEventListener('click', () => finishRound());
 // this is what makes progress survive a refresh instead of resetting.
 async function initApp(){
   await VocabBackend.ensureSignedIn();
+
+  const fetchedSets = await VocabBackend.loadAllVocabContent();
+  if(Object.keys(fetchedSets).length > 0){
+    VOCAB_SETS = fetchedSets;
+  } else {
+    console.warn('Could not load vocab content from Supabase — using built-in fallback content.');
+  }
+  // activeSetId still defaults to DEFAULT_SET_ID; make sure VOCAB points
+  // at that set's real word list now that VOCAB_SETS may have changed.
+  if(VOCAB_SETS[activeSetId]) VOCAB = VOCAB_SETS[activeSetId].words;
+
   let profile = await VocabBackend.getStudentProfile();
 
   if(!profile){
     profile = await promptForStudentSetup();
   }
 
-  assignedSetId = await VocabBackend.getAssignedSetForClassPeriod(profile.class_period);
+  assignedSetId = await VocabBackend.getAssignedSetForClassPeriod(profile.class_period, profile.class_level);
   if(assignedSetId && VOCAB_SETS[assignedSetId] && assignedSetId !== activeSetId){
     activeSetId = assignedSetId;
     VOCAB = VOCAB_SETS[assignedSetId].words;

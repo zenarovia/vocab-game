@@ -125,18 +125,51 @@ async function isSetFullyGraduated(setId){
 // (Setting the assignment itself is done directly in Supabase's Table
 // Editor for now — see README for the exact steps — until a real
 // teacher-facing admin screen exists.)
-async function getAssignedSetForClassPeriod(classPeriod){
-  if(!classPeriod) return null;
-  const { data, error } = await sb
-    .from('set_assignments')
-    .select('set_id')
-    .eq('class_period', classPeriod)
-    .maybeSingle();
+async function getAssignedSetForClassPeriod(classPeriod, classLevel){
+  if(!classPeriod && !classLevel) return null;
+  const { data, error } = await sb.rpc('get_assigned_set', {
+    p_class_period: classPeriod || null,
+    p_class_level: classLevel || null,
+  });
   if(error){
     console.error('Failed to check set assignment:', error);
     return null;
   }
-  return data ? data.set_id : null;
+  return data || null;
+}
+
+// Fetches every active vocab set + its words in one round trip, and
+// reshapes the flat rows into the same {id, name, words, order,
+// previousSetId, activities} registry shape the app already uses —
+// this is what replaces the old hardcoded VOCAB_SETS object.
+async function loadAllVocabContent(){
+  const { data, error } = await sb.rpc('get_all_vocab_content');
+  if(error){
+    console.error('Failed to load vocab content:', error);
+    return {};
+  }
+  const sets = {};
+  (data || []).forEach(row => {
+    if(!sets[row.set_id]){
+      sets[row.set_id] = {
+        id: row.set_id,
+        name: row.set_name,
+        order: row.set_order,
+        previousSetId: row.previous_set_id,
+        activities: row.activities,
+        words: [],
+      };
+    }
+    sets[row.set_id].words.push({
+      number: row.word_number,
+      word: row.word_text,
+      translation: row.english_word,
+      audio: row.audio_url,
+      context: row.context_sentence,
+      contextImage: row.context_image_url,
+    });
+  });
+  return sets;
 }
 
 async function loadStudentProgress(setId){
@@ -300,9 +333,10 @@ async function getRecentClassActivity(classPeriod, minutes){
 // security-definer function since set_assignments only has a read
 // policy by default — this is the app's sanctioned write path,
 // reachable only through the passcode-gated teacher panel.
-async function setClassAssignment(classPeriod, setId){
+async function setClassAssignment(classPeriod, classLevel, setId){
   const { error } = await sb.rpc('set_class_assignment', {
-    p_class_period: classPeriod,
+    p_class_period: classPeriod || null,
+    p_class_level: classLevel || null,
     p_set_id: setId,
   });
   if(error){
@@ -465,6 +499,7 @@ window.VocabBackend = {
   getStudentProfile,
   createStudentProfile,
   loadStudentProgress,
+  loadAllVocabContent,
   saveWordProgress,
   saveModeCount,
   saveCoins,
