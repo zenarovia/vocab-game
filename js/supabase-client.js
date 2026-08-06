@@ -157,6 +157,8 @@ async function loadAllVocabContent(){
         order: row.set_order,
         previousSetId: row.previous_set_id,
         activities: row.activities,
+        unlockThreshold: row.unlock_threshold || undefined,
+        graduationThreshold: row.graduation_threshold || undefined,
         words: [],
       };
     }

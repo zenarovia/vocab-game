@@ -201,6 +201,20 @@ function getEnabledActivities(setId){
   return CANONICAL_ACTIVITY_ORDER.filter(mode => allowed.includes(mode));
 }
 
+// Per-set override for how many questions/graduated words are needed to
+// unlock the next level — falls back to the global defaults above for
+// any set that doesn't specify its own (i.e. every existing set keeps
+// working unchanged). Bigger sets (e.g. a full 1-100 or 1-1000 numbers
+// challenge) can require a genuinely higher bar than a normal 10-20 word set.
+function getUnlockThreshold(setId){
+  const set = VOCAB_SETS[setId];
+  return (set && set.unlockThreshold) ? set.unlockThreshold : MIN_TYPING_QUESTIONS;
+}
+function getGraduationThreshold(setId){
+  const set = VOCAB_SETS[setId];
+  return (set && set.graduationThreshold) ? set.graduationThreshold : GRADUATION_THRESHOLD_COUNT;
+}
+
 function isModeUnlocked(mode){
   if(teacherOverrideActive) return true; // whole-class activity — bypasses individual progress
   const enabled = getEnabledActivities(activeSetId);
@@ -209,8 +223,8 @@ function isModeUnlocked(mode){
   if(idx === 0) return true;   // first enabled activity for this set is always open
 
   const prevMode = enabled[idx - 1];
-  if(prevMode === 'matching') return getGraduatedWords().length >= GRADUATION_THRESHOLD_COUNT;
-  return isModeUnlocked(prevMode) && modeAnsweredCounters[prevMode] >= MIN_TYPING_QUESTIONS;
+  if(prevMode === 'matching') return getGraduatedWords().length >= getGraduationThreshold(activeSetId);
+  return isModeUnlocked(prevMode) && modeAnsweredCounters[prevMode] >= getUnlockThreshold(activeSetId);
 }
 function poolForMode(mode){
   // Every level draws from the full set — the sequential unlock system
@@ -379,6 +393,8 @@ const SET_TROPHIES = {
   'numbers-hundreds-100-1m':  { name: 'Numbers to a Million Trophy', image: 'assets/trophies/set_numbers-hundreds-100-1m.jpg' },
   'days-of-week':   { name: 'Days of the Week Trophy',  image: 'assets/trophies/set_days-of-week.jpg' },
   'months-of-year': { name: 'Months of the Year Trophy', image: 'assets/trophies/set_months-of-year.jpg' },
+  'numbers-1-100':  { name: 'Centurión de los Números', image: 'assets/trophies/set_numbers-1-100.jpg' },
+  'numbers-1-1000': { name: 'Maestro del Milenio',       image: 'assets/trophies/set_numbers-1-1000.jpg' },
 };
 const GENERIC_SET_TROPHY_IMAGE = 'assets/trophies/set_generic.jpg';
 
@@ -1689,11 +1705,12 @@ function updateProgress(){
       ? '1 question so far'
       : `${state.typingQuestionCount} questions so far`;
 
-    const unlocked = state.typingQuestionCount >= MIN_TYPING_QUESTIONS;
+    const threshold = getUnlockThreshold(activeSetId);
+    const unlocked = state.typingQuestionCount >= threshold;
     btnFinishTyping.hidden = !unlocked;
     finishHint.hidden = unlocked;
     if(!unlocked){
-      const remaining = MIN_TYPING_QUESTIONS - state.typingQuestionCount;
+      const remaining = threshold - state.typingQuestionCount;
       finishHint.textContent = remaining === 1
         ? 'Answer 1 more question to unlock "Finish for now"'
         : `Answer ${remaining} more questions to unlock "Finish for now"`;
