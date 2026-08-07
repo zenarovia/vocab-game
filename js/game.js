@@ -395,6 +395,7 @@ const SET_TROPHIES = {
   'months-of-year': { name: 'Months of the Year Trophy', image: 'assets/trophies/set_months-of-year.jpg' },
   'numbers-1-100':  { name: 'Centurión de los Números', image: 'assets/trophies/set_numbers-1-100.jpg' },
   'numbers-1-1000': { name: 'Maestro del Milenio',       image: 'assets/trophies/set_numbers-1-1000.jpg' },
+  'colors': { name: 'Trofeo de Colores', image: 'assets/trophies/set_colors.jpg' },
 };
 const GENERIC_SET_TROPHY_IMAGE = 'assets/trophies/set_generic.jpg';
 
@@ -637,7 +638,7 @@ const state = {
   typingQuestionCount: 0,   // how many questions answered so far (open-ended)
   currentTypingWord: null,  // the word currently being asked
   typingPromptKind: 'number', // what's shown: 'number' -> answer word, or 'word' -> answer number
-  bonusFormat: null,  // 'mathfacts' | 'truefalse' | 'oddoneout' — current bonus sub-format
+  bonusFormat: null,  // 'mathfacts' | 'truefalse' | 'oddoneout' | 'riddle' — current bonus sub-format
   tfIsTrue: null,     // true/false format: is the shown statement correct?
   sequenceTarget: [],       // sequence builder: words sorted into correct order
   sequenceProgress: 0,      // how many tiles placed correctly so far
@@ -1832,12 +1833,12 @@ function pickMathFactsQuestion(){
 function pickTrueFalseQuestion(){
   const v = pickNextContinuousWord(state.typingPool, state.mode);
   const isTrue = Math.random() < 0.5;
-  let displayNumber = v.number;
+  let displayTranslation = v.translation;
   if(!isTrue){
     const others = VOCAB.filter(o => o.number !== v.number);
-    displayNumber = others[Math.floor(Math.random() * others.length)].number;
+    displayTranslation = others[Math.floor(Math.random() * others.length)].translation;
   }
-  return { v, displayNumber, isTrue };
+  return { v, displayTranslation, isTrue };
 }
 
 function pickOddOneOutQuestion(){
@@ -1848,6 +1849,16 @@ function pickOddOneOutQuestion(){
   const oddOne = nonMatching[Math.floor(Math.random() * nonMatching.length)];
   const items = [...shuffledMatching, oddOne].sort(() => Math.random() - 0.5);
   return { items, oddOneNumber: oddOne.number };
+}
+
+// Riddles: a text clue, student types the answer — reuses the same
+// text-answer engine as math facts. Works for any topic (unlike
+// math-facts/odd-even, which are numeric-specific), so this is what
+// non-numeric sets rotate through instead.
+function pickRiddleQuestion(){
+  const withRiddles = VOCAB.filter(v => v.riddle);
+  const pool = withRiddles.length > 0 ? withRiddles : VOCAB;
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 function renderOddOneOutTiles(items, oddOneNumber){
@@ -2109,7 +2120,13 @@ function renderTypingWord(){
     stopSpeedTimer();
     typingPanel.classList.remove('is-dictation');
 
-    const formats = ['mathfacts', 'truefalse', 'oddoneout'];
+    // Non-numeric sets can't use math-facts (needs addition) or odd-one-out
+    // (needs even/odd parity) — they rotate through riddle+truefalse
+    // instead. A set can override this explicitly via bonusFormats;
+    // otherwise it falls back to the original three-format rotation that
+    // every existing numeric set already uses unchanged.
+    const activeSet = VOCAB_SETS[activeSetId];
+    const formats = (activeSet && activeSet.bonusFormats) || ['mathfacts', 'truefalse', 'oddoneout'];
     state.bonusFormat = formats[Math.floor(Math.random() * formats.length)];
 
     if(state.bonusFormat === 'mathfacts'){
@@ -2132,12 +2149,32 @@ function renderTypingWord(){
         const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
         fitSentenceCanvas(canvas, equation, rect.width - padX, rect.height - padY);
       });
+    } else if(state.bonusFormat === 'riddle'){
+      typingInstruction.textContent = 'Adivina:';
+      const riddleWord = pickRiddleQuestion();
+      state.currentTypingWord = riddleWord;
+      state.typingPromptKind = 'word';
+      const clue = riddleWord.riddle || `¿Qué palabra es "${riddleWord.translation}"?`;
+
+      typingPrompt.hidden = false;
+      typingPrompt.classList.add('is-sentence');
+      typingPrompt.innerHTML = '';
+      const canvas = createWordCanvas();
+      canvas.dataset.text = clue;
+      typingPrompt.appendChild(canvas);
+      requestAnimationFrame(() => {
+        const rect = typingPrompt.getBoundingClientRect();
+        const cs = getComputedStyle(typingPrompt);
+        const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+        const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+        fitSentenceCanvas(canvas, clue, rect.width - padX, rect.height - padY);
+      });
     } else if(state.bonusFormat === 'truefalse'){
       typingInstruction.textContent = '¿Es correcto?';
-      const { v: tfWord, displayNumber, isTrue } = pickTrueFalseQuestion();
+      const { v: tfWord, displayTranslation, isTrue } = pickTrueFalseQuestion();
       state.currentTypingWord = tfWord;
       state.tfIsTrue = isTrue;
-      const statement = `${tfWord.word} = ${displayNumber}`;
+      const statement = `${tfWord.word} = ${displayTranslation}`;
 
       typingForm.hidden = true;
       accentRow.hidden = true;

@@ -159,6 +159,7 @@ async function loadAllVocabContent(){
         activities: row.activities,
         unlockThreshold: row.unlock_threshold || undefined,
         graduationThreshold: row.graduation_threshold || undefined,
+        bonusFormats: row.bonus_formats || undefined,
         words: [],
       };
     }
@@ -169,6 +170,7 @@ async function loadAllVocabContent(){
       audio: row.audio_url,
       context: row.context_sentence,
       contextImage: row.context_image_url,
+      riddle: row.riddle_clue,
     });
   });
   return sets;
