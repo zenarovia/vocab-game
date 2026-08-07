@@ -396,6 +396,7 @@ const SET_TROPHIES = {
   'numbers-1-100':  { name: 'Centurión de los Números', image: 'assets/trophies/set_numbers-1-100.jpg' },
   'numbers-1-1000': { name: 'Maestro del Milenio',       image: 'assets/trophies/set_numbers-1-1000.jpg' },
   'colors': { name: 'Trofeo de Colores', image: 'assets/trophies/set_colors.jpg' },
+  'weather': { name: 'Trofeo del Tiempo', image: 'assets/trophies/set_weather.jpg' },
 };
 const GENERIC_SET_TROPHY_IMAGE = 'assets/trophies/set_generic.jpg';
 
